@@ -5,21 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
     <title>OPI•VRI Pro Suite</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'], } } } }
         if (localStorage.theme === 'light') document.documentElement.classList.remove('dark');
         else document.documentElement.classList.add('dark');
-        
-        // DESTRUCTOR DE CACHÉ VIEJO: Elimina Service Workers atascados
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) { registration.unregister(); }
-            });
-        }
     </script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -45,20 +37,26 @@
         .flashcard-inner { transition: transform 0.5s ease-out; }
         .flipped .flashcard-inner { transform: rotateY(180deg); }
         
-        /* Ocultar barra de desplazamiento en subtítulos pero permitir scroll */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .body-zone { transition: all 0.25s ease; cursor: pointer; }
+        .body-zone:hover, .body-zone.active-zone { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8)); fill: #10b981 !important; opacity: 0.95 !important; }
+
+        @media (max-width: 1023px) {
+            .mobile-tab-content { display: none; height: 100%; flex-direction: column; }
+            .mobile-tab-content.active { display: flex; }
+        }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans h-screen flex flex-col overflow-hidden transition-colors duration-200">
 
-    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none opacity-0 -translate-y-4 transition-all duration-300 bg-slate-900 dark:bg-blue-600 text-white px-5 py-3 rounded-full shadow-2xl text-xs md:text-sm font-bold flex items-center gap-2">
         <span id="toastMsg">Notificación</span>
     </div>
 
-    <!-- HEADER MULTIZONA -->
-    <div class="hidden md:flex bg-slate-900 dark:bg-black text-slate-300 text-[11px] py-1.5 px-4 font-mono justify-between items-center border-b border-slate-800 shrink-0">
+    <!-- HEADER MULTIZONA (Escritorio) -->
+    <div class="hidden lg:flex bg-slate-900 dark:bg-black text-slate-300 text-[11px] py-1.5 px-4 font-mono justify-between items-center border-b border-slate-800 shrink-0">
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span class="font-bold uppercase tracking-widest">Global Sync</span></div>
         <div class="flex gap-6">
             <div>🇨🇷 CR: <span id="time-cr" class="font-bold text-white"></span></div>
@@ -68,79 +66,79 @@
             <div>🇺🇸 ET: <span id="time-et" class="font-bold text-rose-400"></span></div>
         </div>
         <div class="flex gap-3 text-[10px] text-slate-400 font-sans font-bold">
-            <span><kbd class="px-1.5 py-0.5 bg-slate-800 rounded">Alt+S</kbd> Subs</span>
-            <span><kbd class="px-1.5 py-0.5 bg-slate-800 rounded">ESC</kbd> Limpiar</span>
+            <span><kbd class="px-1 bg-slate-800 rounded">Alt+S</kbd> Subs</span>
+            <span><kbd class="px-1 bg-slate-800 rounded">ESC</kbd> Limpiar</span>
         </div>
     </div>
 
-    <!-- MAIN APP WRAPPER -->
-    <div class="flex-1 flex flex-col min-h-0 w-full max-w-[1700px] mx-auto p-2 md:p-3 gap-3">
+    <div class="flex-1 flex flex-col min-h-0 w-full max-w-[1700px] mx-auto p-2 lg:p-3 gap-3">
         
         <!-- NAVBAR -->
         <header class="flex justify-between items-center bg-white dark:bg-slate-900 px-3 md:px-4 py-2.5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white px-3 py-1.5 rounded-xl font-black text-sm md:text-base shadow-md">OPI•VRI</div>
+            <div class="flex items-center gap-2 lg:gap-4">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white px-2 lg:px-3 py-1.5 rounded-xl font-black text-sm lg:text-base shadow-md">OPI•VRI</div>
                 <div class="hidden sm:block">
                     <h1 class="font-extrabold leading-none text-slate-800 dark:text-white">Interpreter Pro Suite</h1>
                     <div class="flex gap-2 mt-1">
-                        <select id="agencySelect" onchange="updateAgencyScripts()" class="text-[10px] bg-slate-100 dark:bg-slate-800 font-bold text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded focus:outline-none">
+                        <select id="agencySelect" onchange="updateAgencyScripts()" class="text-[10px] bg-slate-100 dark:bg-slate-800 font-bold text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded focus:outline-none cursor-pointer">
                             <option value="Konnect CX">Konnect CX</option>
                             <option value="MultilingualInt">MultilingualInt</option>
                             <option value="Nuvo CX">Nuvo CX</option>
+                            <option value="Genérica">Genérica</option>
                         </select>
                         <input type="text" id="interpreterIdInput" placeholder="ID Intérprete" oninput="saveInterpreterId()" class="text-[10px] bg-slate-100 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded w-20 focus:outline-none">
                     </div>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2">
-                <button onclick="toggleModal('toolsModal')" class="px-3 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold text-xs rounded-xl border border-indigo-200 dark:border-indigo-800/50">🛠️ Herramientas</button>
-                <button onclick="toggleModal('codeRedModal')" class="px-3 py-2 bg-red-600 text-white font-bold text-xs rounded-xl shadow-md shadow-red-600/30 animate-pulse hidden md:block">🚨 CÓDIGO ROJO</button>
-                <button onclick="openAtlas()" class="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800/50 hidden md:block">🧍‍♂️ Atlas</button>
-                <button onclick="toggleModal('protocolModal')" class="px-3 py-2 bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-xl border border-purple-200 dark:border-purple-800/50 hidden lg:block">📖 Scripts</button>
+            <div class="flex items-center gap-2 overflow-x-auto hide-scroll">
+                <button onclick="toggleModal('toolsModal')" class="px-3 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold text-xs rounded-xl border border-indigo-200 dark:border-indigo-800/50 whitespace-nowrap">🛠️ Tools</button>
+                <button onclick="toggleModal('codeRedModal')" class="px-3 py-2 bg-red-600 text-white font-bold text-xs rounded-xl shadow-md shadow-red-600/30 whitespace-nowrap animate-pulse hidden sm:block">🚨 CÓDIGO ROJO</button>
+                <button onclick="openAtlas()" class="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800/50 whitespace-nowrap hidden md:block">🧍‍♂️ Atlas</button>
+                <button onclick="toggleModal('protocolModal')" class="px-3 py-2 bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-xl border border-purple-200 dark:border-purple-800/50 whitespace-nowrap hidden lg:block">📖 Scripts</button>
                 
                 <div class="hidden sm:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-xl">
                     <span id="segmentCount" class="font-black text-blue-600 dark:text-blue-400">0</span>
                     <span class="text-[9px] font-bold uppercase text-slate-400">Términos</span>
                 </div>
-                <button onclick="toggleTheme()" id="themeBtn" class="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-lg hover:scale-105 transition">☀️</button>
+                <button onclick="toggleTheme()" id="themeBtn" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-lg hover:scale-105 transition">☀️</button>
             </div>
         </header>
 
-        <!-- CUADRÍCULA PRINCIPAL -->
-        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+        <!-- GRID PRINCIPAL -->
+        <div class="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-3 min-h-0 relative">
             
-            <!-- COLUMNA IZQUIERDA: SUBTÍTULOS Y GLOSARIO (8 COLS) -->
-            <div class="lg:col-span-8 flex flex-col gap-3 h-full min-h-0">
+            <!-- TABS 1: GLOSARIO Y SUBTÍTULOS -->
+            <div id="tab-glosario" class="mobile-tab-content active lg:!flex lg:col-span-8 flex-col gap-3 h-full w-full">
                 
-                <!-- MÓDULO DE SUBTÍTULOS BILINGÜES EN VIVO (Mantenido visible) -->
-                <div class="bg-slate-900 dark:bg-slate-950 text-white p-3 md:p-4 rounded-2xl shadow-md border border-slate-700/80 shrink-0 flex flex-col gap-2 h-44 md:h-52">
+                <!-- SUBTÍTULOS EN VIVO -->
+                <div class="bg-slate-900 dark:bg-slate-950 text-white p-3 rounded-2xl shadow-md border border-slate-700/80 shrink-0 flex flex-col gap-2 h-44">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                         <div class="flex items-center gap-2">
-                            <span id="micPulse" class="w-3 h-3 rounded-full bg-slate-600"></span>
-                            <span class="font-black text-xs md:text-sm uppercase tracking-wider text-emerald-400">🎙️ Subtítulos (EN → ES)</span>
+                            <span id="micPulse" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                            <span class="font-black text-xs uppercase tracking-wider text-emerald-400">🎙️ Subtítulos (EN → ES)</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="toggleLiveCaptions()" id="btnStartCaptions" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-sm" title="Atajo: Alt+S">▶ Iniciar Captura</button>
-                            <button onclick="clearCaptionsFeed()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-bold rounded-lg transition" title="Limpiar">🗑️</button>
+                            <button onclick="toggleLiveCaptions()" id="btnStartCaptions" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition" title="Alt+S">▶ Iniciar</button>
+                            <button onclick="clearCaptionsFeed()" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-bold rounded-lg transition">🗑️</button>
                         </div>
                     </div>
                     
                     <div id="transcriptFeed" class="flex-1 overflow-y-auto hide-scroll flex flex-col gap-2 p-1">
-                        <div id="emptyFeedMsg" class="text-slate-500 text-xs text-center mt-6 md:mt-8 font-medium italic">Presiona "Iniciar Captura". El sistema escuchará en Inglés y traducirá al Español.</div>
-                        <div id="liveInterimBox" class="hidden mt-auto"><div class="bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl"><span class="animate-pulse text-[10px] font-bold text-amber-500 uppercase tracking-widest block mb-0.5">Escuchando...</span><span id="liveInterimText" class="text-slate-300 italic text-xs md:text-sm"></span></div></div>
+                        <div id="emptyFeedMsg" class="text-slate-500 text-xs text-center mt-6 font-medium italic">Presiona "Iniciar". Escuchará al doctor (Inglés) y lo traducirá al Español.</div>
+                        <div id="liveInterimBox" class="hidden mt-auto"><div class="bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl"><span class="animate-pulse text-[10px] font-bold text-amber-500 uppercase tracking-widest block mb-0.5">Escuchando...</span><span id="liveInterimText" class="text-slate-300 italic text-xs"></span></div></div>
                     </div>
                 </div>
 
                 <!-- BUSCADOR -->
-                <div class="bg-white dark:bg-slate-900 p-2.5 md:p-3 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 shrink-0">
+                <div class="bg-white dark:bg-slate-900 p-2.5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 shrink-0">
                     <div class="flex gap-2">
                         <div class="relative flex-1">
                             <span class="absolute left-3 top-2 text-slate-400">🔍</span>
-                            <input type="text" id="searchInput" placeholder="Buscar síntoma, medicamento, cirugía..." class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" oninput="filterTerms()" autofocus>
-                            <button onclick="clearSearch()" class="absolute right-3 top-2 text-slate-400 hover:text-rose-500 font-bold text-lg">×</button>
+                            <input type="text" id="searchInput" placeholder="Buscar síntoma, medicamento, cirugía..." class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-sm" oninput="filterTerms()">
+                            <button onclick="clearSearch()" class="absolute right-3 top-2.5 text-slate-400 font-bold">✕</button>
                         </div>
-                        <select id="categoryFilter" onchange="filterTerms()" class="hidden md:block px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold w-48 focus:outline-none">
+                        <select id="categoryFilter" onchange="filterTerms()" class="hidden md:block px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold w-48 outline-none">
                             <option value="Todas">Todas las áreas</option>
                         </select>
                     </div>
@@ -148,35 +146,35 @@
 
                 <!-- TABLA GLOSARIO -->
                 <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <div class="overflow-y-auto flex-1 hide-scroll relative">
+                    <div class="overflow-y-auto flex-1 hide-scroll">
                         <table class="w-full text-left border-collapse">
-                            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 z-10 text-[10px] md:text-xs uppercase tracking-wider">
+                            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-300 z-10 text-[10px] uppercase">
                                 <tr>
                                     <th class="py-2.5 px-3 font-bold w-5/12">Inglés (Clic para copiar)</th>
                                     <th class="py-2.5 px-3 font-bold w-5/12">Español</th>
                                     <th class="py-2.5 px-3 font-bold w-2/12 hidden sm:table-cell">Categoría</th>
                                 </tr>
                             </thead>
-                            <tbody id="tableBody" class="text-xs md:text-sm divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                            <tbody id="tableBody" class="text-xs md:text-sm divide-y divide-slate-100 dark:divide-slate-800/60"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- COLUMNA DERECHA: SCRATCHPAD Y TRACKER (4 COLS) -->
-            <div class="lg:col-span-4 flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden h-full min-h-[400px]">
+            <!-- TAB 2: SCRATCHPAD Y TRACKER -->
+            <div id="tab-bloc" class="mobile-tab-content lg:!flex lg:col-span-4 flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden h-full min-h-[450px]">
                 
-                <div class="px-4 py-3 bg-slate-900 dark:bg-slate-950 text-white flex justify-between items-center shrink-0 border-b border-slate-800">
-                    <span class="font-black text-xs md:text-sm uppercase tracking-widest text-blue-400">📝 Bloc de Llamada</span>
+                <div class="px-3 py-2.5 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                    <span class="font-black text-xs md:text-sm uppercase tracking-widest text-blue-400">📝 Bloc</span>
                     <div class="flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">
-                        <span id="callTimer" class="font-mono text-xs md:text-sm font-bold text-amber-400 w-11 text-center">00:00</span>
-                        <button onclick="toggleTimer()" id="timerBtn" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded font-bold text-[10px] transition">▶</button>
-                        <button onclick="saveCallLog()" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded font-bold text-[10px] transition" title="Guardar turno">💾</button>
+                        <span id="callTimer" class="font-mono text-xs font-bold text-amber-400 w-10 text-center">00:00</span>
+                        <button onclick="toggleTimer()" id="timerBtn" class="px-1.5 py-0.5 bg-emerald-600 rounded font-bold text-[10px]">▶</button>
+                        <button onclick="saveCallLog()" class="px-1.5 py-0.5 bg-blue-600 rounded font-bold text-[10px]" title="Guardar turno">💾</button>
                     </div>
                 </div>
 
-                <div class="p-2.5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 shrink-0">
-                    <div class="flex flex-wrap gap-1.5 mb-1.5">
+                <div class="p-2 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 shrink-0 overflow-x-auto hide-scroll whitespace-nowrap">
+                    <div class="flex gap-1.5 mb-1.5 pb-0.5">
                         <button onclick="insertNote('Pt: ')" class="chip-data">Pt</button>
                         <button onclick="insertNote('DOB: // ')" class="chip-data">DOB</button>
                         <button onclick="insertNote('Edad:  y/o ')" class="chip-data">Edad</button>
@@ -184,7 +182,7 @@
                         <button onclick="insertNote('Dolor: /10 ')" class="chip-data">Dolor /10</button>
                         <button onclick="insertNote('BP: / ')" class="chip-data">BP</button>
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex gap-1.5 pb-0.5">
                         <button onclick="insertNote('↑ ')" class="chip-sym">↑</button>
                         <button onclick="insertNote('↓ ')" class="chip-sym">↓</button>
                         <button onclick="insertNote('→ ')" class="chip-sym">→</button>
@@ -197,59 +195,65 @@
                     </div>
                 </div>
 
-                <div class="p-2.5 flex-1 flex flex-col min-h-0">
-                    <textarea id="scratchpad" placeholder="Anota datos de la llamada... (Alt+⌫ destruye las notas)" class="w-full flex-1 p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-amber-50/40 dark:bg-slate-950/80 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm leading-relaxed resize-none shadow-inner" oninput="saveScratchpad()"></textarea>
-                    
-                    <button onclick="wipeNotes()" class="mt-2.5 w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs md:text-sm rounded-xl shadow-md transition">
-                        🗑️ DESTRUIR NOTAS
-                    </button>
+                <div class="p-2 flex-1 flex flex-col min-h-0">
+                    <textarea id="scratchpad" placeholder="Anota datos de la llamada... (Alt+⌫ destruye las notas)" class="w-full flex-1 p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-amber-50/30 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm resize-none" oninput="saveScratchpad()"></textarea>
+                    <button onclick="wipeNotes()" class="mt-2 w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md">🗑️ DESTRUIR NOTAS</button>
                 </div>
 
-                <div class="p-2.5 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 grid grid-cols-2 gap-2">
-                    <div class="flex items-center bg-white dark:bg-slate-800 rounded-lg px-2 py-1.5 border border-slate-300 dark:border-slate-700 shadow-sm">
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0 grid grid-cols-2 gap-2">
+                    <div class="flex items-center bg-white dark:bg-slate-800 rounded-lg px-2 py-1.5 border border-slate-300 dark:border-slate-700">
                         <input type="number" id="lbInput" placeholder="Lbs" oninput="convertW('lb')" class="w-full bg-transparent font-bold text-xs outline-none dark:text-white">
-                        <span class="text-slate-400 px-1 text-xs font-bold">⇄</span>
-                        <input type="number" id="kgInput" placeholder="Kg" oninput="convertW('kg')" class="w-full bg-transparent font-bold text-xs text-right text-blue-600 dark:text-blue-400 outline-none">
+                        <span class="text-slate-400 px-1 text-xs">⇄</span>
+                        <input type="number" id="kgInput" placeholder="Kg" oninput="convertW('kg')" class="w-full bg-transparent font-bold text-xs text-right text-blue-600 outline-none">
                     </div>
-                    <div class="flex items-center bg-white dark:bg-slate-800 rounded-lg px-2 py-1.5 border border-slate-300 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center bg-white dark:bg-slate-800 rounded-lg px-2 py-1.5 border border-slate-300 dark:border-slate-700">
                         <input type="number" id="fInput" placeholder="°F" oninput="convertT('f')" class="w-full bg-transparent font-bold text-xs outline-none dark:text-white">
-                        <span class="text-slate-400 px-1 text-xs font-bold">⇄</span>
-                        <input type="number" id="cInput" placeholder="°C" oninput="convertT('c')" class="w-full bg-transparent font-bold text-xs text-right text-rose-600 dark:text-rose-400 outline-none">
+                        <span class="text-slate-400 px-1 text-xs">⇄</span>
+                        <input type="number" id="cInput" placeholder="°C" oninput="convertT('c')" class="w-full bg-transparent font-bold text-xs text-right text-rose-600 outline-none">
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
+
+    <!-- TABS NAVEGACIÓN MÓVIL (Celulares) -->
+    <nav class="lg:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around p-2 pb-safe shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <button onclick="switchMobileTab('glosario')" id="nav-glosario" class="flex-1 flex flex-col items-center p-2 text-blue-600 dark:text-blue-400 font-bold">
+            <span class="text-xl mb-1">🔍</span><span class="text-[10px] uppercase">Glosario / Subs</span>
+        </button>
+        <button onclick="switchMobileTab('bloc')" id="nav-bloc" class="flex-1 flex flex-col items-center p-2 text-slate-400 hover:text-blue-500 transition font-bold">
+            <span class="text-xl mb-1">📝</span><span class="text-[10px] uppercase">Bloc / Reloj</span>
+        </button>
+    </nav>
 
 
     <!-- ========================================================================= -->
     <!-- MODALES DE HERRAMIENTAS                                                   -->
     <!-- ========================================================================= -->
 
-    <!-- MULTI-HERRAMIENTAS -->
-    <div id="toolsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-        <div class="bg-slate-50 dark:bg-slate-900 w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
-                <h2 class="font-black text-xl">🛠️ Multi-Herramientas</h2>
+    <!-- MEGA-MENÚ HERRAMIENTAS -->
+    <div id="toolsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-slate-50 dark:bg-slate-900 w-full max-w-5xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+            <div class="bg-indigo-700 text-white px-5 py-4 flex justify-between items-center shrink-0">
+                <h2 class="font-black text-lg">🛠️ Multi-Herramientas</h2>
                 <button onclick="toggleModal('toolsModal')" class="w-8 h-8 rounded-full bg-white/20 text-white font-bold text-xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button onclick="toggleModal('toolsModal'); toggleModal('shiftModal'); renderShiftLog();" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left hover:border-blue-500 transition">
-                    <div class="text-4xl mb-3">📊</div><h3 class="font-bold text-sm dark:text-white">Tracker Turnos</h3><p class="text-[10px] text-slate-500">Historial y Excel.</p>
+            <div class="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <button onclick="toggleModal('toolsModal'); toggleModal('shiftModal'); renderShiftLog();" class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left">
+                    <div class="text-3xl mb-2">📊</div><h3 class="font-bold text-sm dark:text-white">Tracker Turnos</h3><p class="text-[10px] text-slate-500">Historial y Excel.</p>
                 </button>
-                <button onclick="toggleModal('toolsModal'); toggleModal('sightModal');" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left hover:border-emerald-500 transition">
-                    <div class="text-4xl mb-3">👁️</div><h3 class="font-bold text-sm dark:text-white">Traducción Vista</h3><p class="text-[10px] text-slate-500">Práctica con textos.</p>
+                <button onclick="toggleModal('toolsModal'); toggleModal('sightModal');" class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left">
+                    <div class="text-3xl mb-2">👁️</div><h3 class="font-bold text-sm dark:text-white">Traducción Vista</h3><p class="text-[10px] text-slate-500">Pega textos en inglés.</p>
                 </button>
-                <button onclick="toggleModal('toolsModal'); toggleModal('refsModal');" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left hover:border-amber-500 transition">
-                    <div class="text-4xl mb-3">🖼️</div><h3 class="font-bold text-sm dark:text-white">Ref. Visuales</h3><p class="text-[10px] text-slate-500">Dolor, heces, labs.</p>
+                <button onclick="toggleModal('toolsModal'); toggleModal('refsModal');" class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left">
+                    <div class="text-3xl mb-2">🖼️</div><h3 class="font-bold text-sm dark:text-white">Ref. Visuales</h3><p class="text-[10px] text-slate-500">Dolor, heces, labs.</p>
                 </button>
-                <button onclick="toggleModal('toolsModal'); toggleModal('rootsModal');" class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left hover:border-purple-500 transition">
-                    <div class="text-4xl mb-3">🧩</div><h3 class="font-bold text-sm dark:text-white">Raíces Médicas</h3><p class="text-[10px] text-slate-500">Afijos y sufijos.</p>
+                <button onclick="toggleModal('toolsModal'); toggleModal('rootsModal');" class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-left">
+                    <div class="text-3xl mb-2">🧩</div><h3 class="font-bold text-sm dark:text-white">Raíces Médicas</h3><p class="text-[10px] text-slate-500">Afijos y sufijos.</p>
                 </button>
-                <div class="sm:col-span-2 lg:col-span-4 mt-2 flex flex-col sm:flex-row gap-3">
-                    <button onclick="toggleModal('toolsModal'); toggleModal('flashcardModal'); nextFlashcard();" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white p-4 rounded-2xl font-bold text-base shadow-md transition">🧠 Flashcards de Estudio</button>
-                    <button onclick="toggleModal('toolsModal'); toggleModal('dataModal');" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white p-4 rounded-2xl font-bold text-base shadow-md transition">📂 Importar CSV / Excel</button>
+                <div class="sm:col-span-2 lg:col-span-4 mt-2 flex flex-col sm:flex-row gap-2">
+                    <button onclick="toggleModal('toolsModal'); toggleModal('flashcardModal'); nextFlashcard();" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white p-3 rounded-xl font-bold text-sm shadow-md transition">🧠 Modo Estudio (Flashcards)</button>
+                    <button onclick="toggleModal('toolsModal'); toggleModal('dataModal');" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white p-3 rounded-xl font-bold text-sm shadow-md transition">📂 Importar/Exportar CSV</button>
                 </div>
             </div>
         </div>
@@ -260,9 +264,9 @@
         <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-slate-800 text-white px-5 py-4 flex justify-between items-center"><h2 class="font-black text-lg">📂 Base de Datos</h2><button onclick="toggleModal('dataModal')" class="font-bold text-2xl">&times;</button></div>
             <div class="p-6 space-y-4 text-sm">
-                <p class="text-slate-600 dark:text-slate-400">Si tienes tu lista de 8,000 palabras en Excel, guárdala como CSV (3 columnas: Categoría, Inglés, Español) y súbela aquí.</p>
+                <p class="text-slate-600 dark:text-slate-400">Si tienes tu lista gigante en Excel, guárdala como CSV (Categoría, Inglés, Español) y súbela aquí.</p>
                 <input type="file" id="csvFileInput" accept=".csv" class="w-full border p-2 rounded-lg bg-slate-50 dark:bg-slate-800 dark:text-white dark:border-slate-700">
-                <button onclick="importCSV()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition">Cargar Archivo CSV</button>
+                <button onclick="importCSV()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Cargar Archivo CSV</button>
                 <hr class="border-slate-200 dark:border-slate-800">
                 <button onclick="exportCSV()" class="w-full py-2 bg-emerald-600 text-white font-bold rounded-xl">Descargar Glosario (CSV)</button>
                 <button onclick="resetDatabase()" class="w-full py-2 border border-red-500 text-red-500 font-bold rounded-xl">Restaurar de Fábrica</button>
@@ -276,13 +280,45 @@
             <div class="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center"><h2 class="font-black text-xl">🧍‍♂️ Atlas Anatómico</h2><button onclick="toggleModal('atlasModal')" class="font-bold text-2xl">&times;</button></div>
             <div class="flex flex-col sm:flex-row flex-1 overflow-hidden">
                 <div class="w-full sm:w-1/3 bg-slate-50 dark:bg-slate-950 p-4 overflow-y-auto">
-                    <button onclick="loadAtlasSystem('Nervioso')" class="w-full text-left p-3 mb-2 bg-emerald-600 text-white rounded-xl font-bold">🧠 Nervioso</button>
-                    <button onclick="loadAtlasSystem('Respiratorio')" class="w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🫁 Respiratorio</button>
-                    <button onclick="loadAtlasSystem('Cardiovascular')" class="w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🫀 Cardiovascular</button>
-                    <button onclick="loadAtlasSystem('Digestivo')" class="w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🥪 Digestivo</button>
-                    <button onclick="loadAtlasSystem('Esquelético')" class="w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🦴 Esquelético</button>
+                    <!-- Mapa SVG Interactivo -->
+                    <div class="w-40 mx-auto shrink-0 flex flex-col items-center bg-slate-900 rounded-2xl p-2 border border-slate-800 shadow-inner relative mb-4">
+                        <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Mapa Corporal</span>
+                        <svg viewBox="0 0 200 420" class="w-full h-auto select-none">
+                            <g fill="#334155" stroke="#475569" stroke-width="2">
+                                <circle cx="100" cy="42" r="28" /><rect x="88" y="68" width="24" height="18" rx="4" />
+                                <path d="M60,84 L140,84 L132,225 L68,225 Z" rx="12" />
+                                <rect x="34" y="86" width="22" height="125" rx="11" /><rect x="144" y="86" width="22" height="125" rx="11" />
+                                <rect x="68" y="225" width="28" height="165" rx="12" /><rect x="104" y="225" width="28" height="165" rx="12" />
+                            </g>
+                            <path id="svg-Nervioso" onclick="loadAtlasSystem('Nervioso')" class="body-zone" fill="#a855f7" opacity="0.75" d="M80,32 C80,18 120,18 120,32 C120,44 80,44 80,32 Z"></path>
+                            <g id="svg-Sentidos" onclick="loadAtlasSystem('Sentidos')" class="body-zone" fill="#38bdf8" opacity="0.8">
+                                <circle cx="90" cy="45" r="5" /><circle cx="110" cy="45" r="5" /><rect x="93" y="55" width="14" height="6" rx="3" />
+                            </g>
+                            <g id="svg-Respiratorio" onclick="loadAtlasSystem('Respiratorio')" class="body-zone" fill="#06b6d4" opacity="0.75">
+                                <path d="M72,95 C68,115 68,140 88,142 L94,95 Z" /><path d="M128,95 C132,115 132,140 112,142 L106,95 Z" />
+                            </g>
+                            <circle id="svg-Cardiovascular" onclick="loadAtlasSystem('Cardiovascular')" class="body-zone" cx="104" cy="122" r="13" fill="#f43f5e" opacity="0.9"></circle>
+                            <path id="svg-Digestivo" onclick="loadAtlasSystem('Digestivo')" class="body-zone" fill="#f97316" opacity="0.75" d="M74,148 L126,148 L122,192 L78,192 Z"></path>
+                            <g id="svg-Urinario" onclick="loadAtlasSystem('Urinario')" class="body-zone" fill="#3b82f6" opacity="0.85">
+                                <ellipse cx="82" cy="175" rx="7" ry="11" /><ellipse cx="118" cy="175" rx="7" ry="11" /><circle cx="100" cy="205" r="8" />
+                            </g>
+                            <path id="svg-Reproductor" onclick="loadAtlasSystem('Reproductor')" class="body-zone" fill="#ec4899" opacity="0.8" d="M80,212 L120,212 L100,234 Z"></path>
+                            <g id="svg-Esquelético" onclick="loadAtlasSystem('Esquelético')" class="body-zone" fill="#eab308" opacity="0.8">
+                                <circle cx="45" cy="145" r="9" /><circle cx="155" cy="145" r="9" /><circle cx="82" cy="295" r="11" /><circle cx="118" cy="295" r="11" />
+                            </g>
+                        </svg>
+                    </div>
+                    <!-- Botones -->
+                    <button id="btn-atlas-Nervioso" onclick="loadAtlasSystem('Nervioso')" class="atlas-btn w-full text-left p-3 mb-2 bg-emerald-600 text-white rounded-xl font-bold dark:text-white">🧠 Nervioso</button>
+                    <button id="btn-atlas-Sentidos" onclick="loadAtlasSystem('Sentidos')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">👁️ Sentidos</button>
+                    <button id="btn-atlas-Respiratorio" onclick="loadAtlasSystem('Respiratorio')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🫁 Respiratorio</button>
+                    <button id="btn-atlas-Cardiovascular" onclick="loadAtlasSystem('Cardiovascular')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🫀 Cardiovascular</button>
+                    <button id="btn-atlas-Digestivo" onclick="loadAtlasSystem('Digestivo')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🥪 Digestivo</button>
+                    <button id="btn-atlas-Urinario" onclick="loadAtlasSystem('Urinario')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">💧 Urinario/Renal</button>
+                    <button id="btn-atlas-Reproductor" onclick="loadAtlasSystem('Reproductor')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🤰 Reproductor</button>
+                    <button id="btn-atlas-Esquelético" onclick="loadAtlasSystem('Esquelético')" class="atlas-btn w-full text-left p-3 mb-2 bg-slate-200 dark:bg-slate-800 rounded-xl font-bold dark:text-white">🦴 Esquelético</button>
                 </div>
-                <div class="w-full sm:w-2/3 p-5 overflow-y-auto"><h3 id="atlas-title" class="font-black text-emerald-600 mb-4 text-lg">Selecciona</h3><div id="atlas-content" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div></div>
+                <div class="w-full sm:w-2/3 p-5 overflow-y-auto"><h3 id="atlas-title" class="font-black text-emerald-600 mb-3 text-lg">Selecciona un sistema</h3><div id="atlas-content" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div></div>
             </div>
         </div>
     </div>
@@ -297,528 +333,537 @@
         <div class="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-3xl flex flex-col"><div class="bg-purple-700 text-white px-5 py-4 flex justify-between"><h2 class="font-black text-lg">📖 Guiones</h2><button onclick="toggleModal('protocolModal')" class="font-bold text-2xl">&times;</button></div><div class="p-5 text-sm dark:text-white"><div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl mb-3"><p id="script-intro" class="font-bold text-base"></p></div><div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl"><p class="mb-2"><b>Repetición:</b> The interpreter requests a repetition, please.</p><p><b>Aclaración:</b> The interpreter requests a brief clarification...</p></div></div></div>
     </div>
 
-    <!-- RESTO DE MODALES BASICOS OCULTOS... (Flashcards, Shift Tracker, Sight, Refs, Roots) -->
-    <!-- (Se reusan las mismas ventanas pequeñas de la versión anterior) -->
+    <!-- SHIFT TRACKER -->
     <div id="shiftModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl flex flex-col max-h-[85vh]"><div class="bg-slate-800 text-white px-5 py-4 flex justify-between"><h2 class="font-black text-lg">📊 Turnos</h2><button onclick="toggleModal('shiftModal')" class="font-bold text-xl">&times;</button></div><div class="p-5 flex-1 overflow-auto"><button onclick="exportShiftCSV()" class="mb-4 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl">📥 Excel</button><table class="w-full text-left text-xs"><tbody id="shiftLogBody" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody></table></div></div></div>
+    
+    <!-- SIGHT TRANSLATION -->
     <div id="sightModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-3xl flex flex-col h-[85vh]"><div class="bg-emerald-700 text-white px-5 py-4 flex justify-between"><h2 class="font-black">👁️ Traducción a Vista</h2><button onclick="toggleModal('sightModal')">&times;</button></div><div class="p-5 flex-1 flex flex-col md:flex-row gap-4"><textarea id="sightInput" class="flex-1 p-3 border rounded-xl dark:bg-slate-800 text-sm" placeholder="Pega texto médico en inglés..."></textarea><div class="flex flex-col gap-2 w-full md:w-1/2"><button onclick="processSightText()" class="py-2 bg-emerald-600 text-white font-bold rounded-xl">Procesar</button><div id="sightOutput" class="flex-1 p-3 border rounded-xl dark:bg-slate-800 overflow-auto text-sm"></div></div></div></div></div>
+    
+    <!-- ROOTS -->
     <div id="rootsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-3xl flex flex-col h-[80vh]"><div class="bg-purple-700 text-white px-5 py-4 flex justify-between"><h2 class="font-black">🧩 Raíces Médicas</h2><button onclick="toggleModal('rootsModal')">&times;</button></div><div class="p-5 flex-1 flex flex-col"><input type="text" id="rootsSearch" placeholder="Buscar prefijo..." class="p-2 border rounded-lg mb-3 dark:bg-slate-800" oninput="filterRoots()"><div class="flex-1 overflow-auto border rounded-xl"><table class="w-full text-left text-sm"><tbody id="rootsBody" class="divide-y"></tbody></table></div></div></div></div>
+    
+    <!-- REFS -->
     <div id="refsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4"><div class="bg-slate-50 dark:bg-slate-900 w-full max-w-4xl rounded-3xl flex flex-col h-[85vh]"><div class="bg-amber-600 text-white px-5 py-4 flex justify-between"><h2 class="font-black">🖼️ Referencias Visuales</h2><button onclick="toggleModal('refsModal')">&times;</button></div><div class="p-5 overflow-auto space-y-4"><div class="bg-white p-4 rounded-xl dark:bg-slate-800"><b>Escala Dolor Wong-Baker:</b> 😃(0) 🙂(2) 😐(4) 🙁(6) 😫(8) 😭(10)</div><div class="bg-white p-4 rounded-xl dark:bg-slate-800"><b>Signos Vitales:</b> BP < 120/80 | HR 60-100 | SpO2 > 95% | Glucosa < 100</div><div class="bg-white p-4 rounded-xl dark:bg-slate-800"><b>Escala Bristol:</b> 1-2(Estreñimiento) | 3-4(Normal) | 5-7(Diarrea)</div></div></div></div>
-    <div id="flashcardModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[80] flex items-center justify-center p-4"><div class="w-full max-w-lg flex flex-col items-center"><div class="w-full flex justify-between mb-4 text-white"><h2 class="font-black text-xl">🧠 Modo Estudio</h2><button onclick="toggleModal('flashcardModal')" class="font-bold text-2xl">&times;</button></div><div id="fc-card" class="relative w-full h-64 perspective-1000 cursor-pointer" onclick="flipCard()"><div class="flashcard-inner w-full h-full relative transform-style-3d"><div class="absolute w-full h-full backface-hidden bg-white dark:bg-slate-800 rounded-3xl border-4 border-blue-500 flex flex-col items-center justify-center p-6 text-center"><h3 id="fc-front" class="text-3xl font-black dark:text-white">Term</h3></div><div class="absolute w-full h-full backface-hidden rotate-y-180 bg-blue-600 rounded-3xl border-4 border-blue-400 flex flex-col items-center justify-center p-6 text-center text-white"><h3 id="fc-back" class="text-3xl font-black">Término</h3></div></div></div><div class="mt-6 flex gap-3 w-full"><button onclick="nextFlashcard()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold">Siguiente ➔</button></div></div></div>
+    
+    <!-- FLASHCARDS -->
+    <div id="flashcardModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[80] flex items-center justify-center p-4"><div class="w-full max-w-lg flex flex-col items-center"><div class="w-full flex justify-between mb-4 text-white"><h2 class="font-black text-xl">🧠 Modo Estudio</h2><button onclick="toggleModal('flashcardModal')" class="font-bold text-2xl">&times;</button></div><div id="fc-card" class="relative w-full h-64 perspective-1000 cursor-pointer" onclick="flipCard()"><div class="flashcard-inner w-full h-full relative transform-style-3d"><div class="absolute w-full h-full backface-hidden bg-white dark:bg-slate-800 rounded-3xl border-4 border-blue-500 flex flex-col items-center justify-center p-6 text-center"><h3 id="fc-front" class="text-2xl font-black dark:text-white">Term</h3></div><div class="absolute w-full h-full backface-hidden rotate-y-180 bg-blue-600 rounded-3xl border-4 border-blue-400 flex flex-col items-center justify-center p-6 text-center text-white"><h3 id="fc-back" class="text-2xl font-black">Término</h3></div></div></div><div class="mt-6 flex gap-3 w-full"><button onclick="nextFlashcard()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold">Siguiente ➔</button></div></div></div>
 
     <!-- ========================================================================= -->
     <!-- LOGICA JAVASCRIPT GLOBAL Y BASE DE DATOS ULTRA-DENSA                      -->
     <!-- ========================================================================= -->
     <script>
-        // BASE DE DATOS PURA (Sin frases largas para asegurar carga masiva)
+        // LA BASE DE DATOS ORIGINAL COMPLETA CON TODAS LAS PALABRAS
         const rawDatabase = `
-[Anatomía y Órganos]
-Head|Cabeza
-Skull|Cráneo
-Brain|Cerebro
-Brainstem|Tronco encefálico
-Cerebellum|Cerebelo
-Spinal cord|Médula espinal
-Nerve|Nervio
-Face|Cara
-Forehead|Frente
-Temple|Sien
-Eye|Ojo
-Pupil|Pupila
-Cornea|Córnea
-Retina|Retina
-Tear duct|Conducto lagrimal
-Eyelid|Párpado
-Eyebrow|Ceja
-Ear|Oído / Oreja
-Eardrum|Tímpano
-Cochlea|Cóclea
-Nose|Nariz
-Nostril|Fosa nasal
-Sinuses|Senos paranasales
-Mouth|Boca
-Lip|Labio
-Tooth / Teeth|Diente / Dientes
-Gum|Encía
-Tongue|Lengua
-Palate|Paladar
-Jaw / Mandible|Mandíbula
-Cheek|Mejilla / Cachete
-Cheekbone|Pómulo
-Chin|Mentón
-Throat|Garganta
-Pharynx|Faringe
-Larynx / Voice box|Laringe / Cuerdas vocales
-Tonsils|Amígdalas / Anginas
-Adenoids|Adenoides
-Neck|Cuello
-Nape|Nuca
-Thyroid gland|Glándula tiroides
-Lymph node|Ganglio linfático
-Shoulder|Hombro
-Collarbone / Clavicle|Clavícula
-Shoulder blade / Scapula|Omóplato
-Arm|Brazo
-Armpit / Axilla|Axila
-Elbow|Codo
-Forearm|Antebrazo
-Wrist|Muñeca
-Hand|Mano
-Palm|Palma
-Finger|Dedo de la mano
-Thumb|Dedo pulgar
-Knuckle|Nudillo
-Nail|Uña
-Chest / Thorax|Pecho / Tórax
-Rib|Costilla
-Breastbone / Sternum|Esternón
-Breast|Seno / Pecho
-Nipple|Pezón
-Lung|Pulmón
-Trachea / Windpipe|Tráquea
-Bronchus|Bronquio
-Alveoli|Alvéolos
-Diaphragm|Diafragma
-Heart|Corazón
-Atrium|Aurícula
-Ventricle|Ventrículo
-Aorta|Aorta
-Artery|Arteria
-Vein|Vena
-Capillary|Capilar
-Abdomen / Belly|Abdomen / Barriga
-Navel / Belly button|Ombligo
-Stomach|Estómago
-Liver|Hígado
-Gallbladder|Vesícula biliar
-Bile duct|Conducto biliar
-Pancreas|Páncreas
-Spleen|Bazo
-Intestine / Bowel|Intestino
-Small intestine|Intestino delgado
-Large intestine / Colon|Intestino grueso / Colon
-Appendix|Apéndice
-Rectum|Recto
-Anus|Ano
-Back|Espalda
-Spine / Backbone|Columna vertebral
-Vertebra|Vértebra
-Tailbone / Coccyx|Cóccix / Rabadilla
-Kidney|Riñón
-Ureter|Uréter
-Bladder|Vejiga
-Urethra|Uretra
-Pelvis|Pelvis
-Groin|Ingle
-Genitals|Genitales
-Ovary|Ovario
-Fallopian tube|Trompa de Falopio
-Uterus / Womb|Útero / Matriz
-Cervix|Cuello uterino
-Vagina|Vagina
-Vulva|Vulva
-Testicle|Testículo
-Scrotum|Escroto
-Prostate|Próstata
-Penis|Pene
-Buttocks|Glúteos / Nalgas
-Hip|Cadera
-Leg|Pierna
-Thigh|Muslo
-Femur|Fémur
-Knee|Rodilla
-Kneecap / Patella|Rótula / Choquezuela
-Meniscus|Menisco
-Calf|Pantorrilla
-Shin|Espinilla
-Tibia|Tibia
-Fibula|Peroné
-Ankle|Tobillo
-Foot|Pie
-Heel|Talón
-Sole|Planta del pie
-Toe|Dedo del pie
-Skin|Piel
-Hair|Cabello / Pelo
-Muscle|Músculo
-Tendon|Tendón
-Ligament|Ligamento
-Cartilage|Cartílago
-Bone|Hueso
-Bone marrow|Médula ósea
-Joint|Articulación
-Blood|Sangre
-Plasma|Plasma
-Red blood cell|Glóbulo rojo
-White blood cell|Glóbulo blanco
-Platelet|Plaqueta
-Antibody|Anticuerpo
-Hormone|Hormona
-Cell|Célula
-Tissue|Tejido
+[Admisión, Seguros y Legal]
+Do you have any underlying medical conditions?|¿Tiene alguna condición médica subyacente (enfermedad de base)?
+Have you met your annual deductible?|¿Ya alcanzó su deducible anual?
+Out-of-pocket maximum|Límite máximo de gastos de su propio bolsillo
+Copayment (Copay) and Coinsurance|Copago y coseguro
+Primary Care Physician (PCP)|Médico de atención primaria / Médico de cabecera
+We need a prior authorization from your insurance carrier.|Necesitamos una autorización previa de su compañía de seguros.
+Referral to see a specialist|Remisión / Derivación / Orden para ver a un especialista
+In-network vs. Out-of-network provider|Proveedor dentro de la red vs. fuera de la red
+Advance directive / Living will|Directriz médica anticipada / Voluntad anticipada / Testamento vital
+Durable Power of Attorney for Healthcare|Poder notarial duradero para atención médica
+Do Not Resuscitate (DNR) order|Orden de no reanimar (No resucitar)
+Informed consent form|Formulario de consentimiento informado
+HIPAA Notice of Privacy Practices|Aviso de prácticas de privacidad de la ley HIPAA
+Release of medical records / medical information|Autorización para divulgar expedientes médicos / historial clínico
+Worker's compensation claim|Reclamo de compensación laboral (accidentes de trabajo)
+Sliding fee scale discount program|Programa de descuento con escala de tarifas ajustables según ingresos
+Financial assistance / Charity care|Asistencia financiera / Atención médica de beneficencia
+Explanation of Benefits (EOB)|Explicación de beneficios (estado de cuenta del seguro)
+Subscriber / Policyholder and Dependents|Suscriptor / Titular de la póliza y dependientes
+Effective date of coverage|Fecha de entrada en vigor de la cobertura
+Coordination of benefits|Coordinación de beneficios (entre dos seguros)
+Medicaid / Medicare Part A, B, C, D|Medicaid / Medicare Parte A (Hospital), B (Médico), C, D (Recetas)
+Itemized bill / Billing statement|Factura detallada / Estado de cuenta de facturación
+Collection agency / Past due balance|Agencia de cobranza / Saldo vencido
+Legal guardian / Foster parent|Tutor legal / Padre de crianza temporal
 
-[Enfermedades y Condiciones]
-Asthma|Asma
-Bronchitis|Bronquitis
-Pneumonia|Neumonía / Pulmonía
-Tuberculosis|Tuberculosis
-Emphysema|Enfisema
-COPD|Enfermedad Pulmonar Obstructiva Crónica (EPOC)
-Hypertension|Hipertensión / Presión alta
-Hypotension|Hipotensión / Presión baja
-Heart attack / Myocardial infarction|Ataque al corazón / Infarto
-Heart failure|Insuficiencia cardíaca
-Arrhythmia|Arritmia
-Atrial fibrillation|Fibrilación auricular
-Stroke / CVA|Derrame cerebral
-Aneurysm|Aneurisma
-Anemia|Anemia
-Leukemia|Leucemia
-Diabetes|Diabetes
-Hypoglycemia|Hipoglucemia / Azúcar baja
-Hyperglycemia|Hiperglucemia / Azúcar alta
-Hypothyroidism|Hipotiroidismo
-Hyperthyroidism|Hipertiroidismo
-Obesity|Obesidad
-Arthritis|Artritis
-Osteoarthritis|Osteoartritis / Artrosis
-Osteoporosis|Osteoporosis
-Gout|Gota
-Fibromyalgia|Fibromialgia
-Lupus|Lupus
-Scoliosis|Escoliosis
-Herniated disc|Hernia discal
-Sciatica|Ciática
-Migraine|Migraña / Jaqueca
-Epilepsy|Epilepsia
-Seizure|Convulsión / Ataque
-Alzheimer's disease|Enfermedad de Alzheimer
-Dementia|Demencia
-Parkinson's disease|Enfermedad de Parkinson
-Multiple sclerosis|Esclerosis múltiple
-Depression|Depresión
-Anxiety|Ansiedad
-Bipolar disorder|Trastorno bipolar
-Schizophrenia|Esquizofrenia
-PTSD|Trastorno de estrés postraumático
-Autism|Autismo
-ADHD|TDAH
-Conjunctivitis / Pink eye|Conjuntivitis
-Cataract|Catarata
-Glaucoma|Glaucoma
-Macular degeneration|Degeneración macular
-Otitis media / Ear infection|Infección de oído
-Tinnitus|Zumbido en los oídos
-Sinusitis|Sinusitis
-Tonsillitis|Amigdalitis / Infección de anginas
-GERD / Acid reflux|Reflujo gástrico / Acidez
-Gastritis|Gastritis
-Ulcer|Úlcera
-Gastroenteritis|Gastroenteritis
-Appendicitis|Apendicitis
-Hepatitis|Hepatitis
-Cirrhosis|Cirrosis
-Gallstones|Cálculos biliares / Piedras en la vesícula
-Pancreatitis|Pancreatitis
-IBS|Síndrome del intestino irritable
-Crohn's disease|Enfermedad de Crohn
-Celiac disease|Enfermedad celíaca
-Hemorrhoids|Hemorroides / Almorranas
-Kidney stones|Cálculos renales / Piedras
-UTI|Infección urinaria / Mal de orín
-Kidney failure|Insuficiencia renal
-Prostatitis|Prostatitis
-Endometriosis|Endometriosis
-PCOS|Síndrome de ovario poliquístico
-Ectopic pregnancy|Embarazo ectópico
-Miscarriage|Aborto espontáneo / Pérdida
-Preeclampsia|Preeclampsia
-Syphilis|Sífilis
-Gonorrhea|Gonorrea
-Chlamydia|Clamidia
-Herpes|Herpes
-HIV / AIDS|VIH / SIDA
-HPV|VPH
-Measles|Sarampión
-Mumps|Paperas
-Rubella|Rubéola
-Chickenpox|Varicela
-Shingles|Culebrilla / Herpes zóster
-Tetanus|Tétanos
-Rabies|Rabia
-Lyme disease|Enfermedad de Lyme
-Malaria|Malaria
-Dengue|Dengue
-Zika|Zika
-Eczema|Eccema
-Psoriasis|Psoriasis
-Acne|Acné
-Melanoma|Melanoma
-Carcinoma|Carcinoma
-Tumor|Tumor
-Cancer|Cáncer
-Metastasis|Metástasis
-Sepsis|Sepsis
-Allergy|Alergia
-Anaphylaxis|Anafilaxia
+[Instrucciones y Examen Físico]
+Please step onto the scale and remove your shoes.|Por favor súbase a la báscula (pesa) y quítese los zapatos.
+Roll up your sleeve so I can take your blood pressure.|Súbase la manga para poder tomarle la presión arterial.
+Take a deep breath in through your mouth and hold it.|Respire profundo por la boca y contenga el aire.
+Exhale slowly / Breathe normally.|Exhale despacio / Respire normalmente.
+Scoot all the way down to the end of the exam table.|Deslícese hasta el borde inferior de la camilla.
+Place your feet in the stirrups and relax your knees.|Coloque los pies en los estribos y relaje las rodillas.
+Undress from the waist up / from the waist down.|Desvístase de la cintura para arriba / de la cintura para abajo.
+Put on this gown with the opening in the back.|Póngase esta bata con la abertura hacia atrás.
+Lie flat on your back (Supine position).|Acuéstese boca arriba (Posición supina).
+Lie flat on your stomach (Prone position).|Acuéstese boca abajo (Posición prona).
+Roll over onto your left side and bend your knees.|Recuéstese sobre su costado izquierdo y doble las rodillas.
+Follow my finger with your eyes without moving your head.|Siga mi dedo con la mirada sin mover la cabeza.
+Squeeze my fingers as hard as you can.|Apriete mis dedos lo más fuerte que pueda.
+Push against my hands with your feet.|Empuje mis manos con sus pies.
+Shrug your shoulders and resist my push.|Encoja los hombros y resista mi empuje.
+Stick out your tongue and say 'Ah'.|Saque la lengua y diga 'Ah'.
+Clench your teeth / Bite down hard.|Apriete los dientes / Muerda fuerte.
+Point with one finger to where it hurts the most.|Señale con un solo dedo dónde le duele más.
+Tell me if you feel tenderness when I press here.|Dígame si siente dolor o sensibilidad cuando presiono aquí.
+We need a midstream clean-catch urine sample.|Necesitamos una muestra de orina limpia de la mitad del chorro.
+Wipe from front to back with the antiseptic towelette.|Límpiese de adelante hacia atrás con la toallita antiséptica.
+Do not eat or drink anything after midnight (NPO / Fasting).|No coma ni beba nada después de la medianoche (En ayunas).
+Remain still and do not talk during the scan.|Permanezca quieto y no hable durante el estudio.
 
-[Medicamentos y Fármacos]
-Acetaminophen / Paracetamol|Acetaminofén / Paracetamol
-Ibuprofen|Ibuprofeno
-Naproxen|Naproxeno
-Aspirin|Aspirina
-Amoxicillin|Amoxicilina
-Azithromycin|Azitromicina
-Ciprofloxacin|Ciprofloxacino
-Cephalexin|Cefalexina
-Doxycycline|Doxiciclina
-Penicillin|Penicilina
-Fluconazole|Fluconazol
-Acyclovir|Aciclovir
-Lisinopril|Lisinopril
-Losartan|Losartán
-Amlodipine|Amlodipino
-Metoprolol|Metoprolol
-Furosemide|Furosemida
-Hydrochlorothiazide|Hidroclorotiazida
-Atorvastatin|Atorvastatina
-Simvastatin|Simvastatina
-Metformin|Metformina
-Insulin|Insulina
-Glipizide|Glipizida
-Levothyroxine|Levotiroxina
-Omeprazole|Omeprazol
-Pantoprazole|Pantoprazol
-Famotidine|Famotidina
-Ondansetron|Ondansetrón
-Albuterol|Albuterol / Salbutamol
-Fluticasone|Fluticasona
-Montelukast|Montelukast
-Prednisone|Prednisona
-Cetirizine|Cetirizina
-Loratadine|Loratadina
-Diphenhydramine|Difenhidramina
-Gabapentin|Gabapentina
-Pregabalin|Pregabalina
-Cyclobenzaprine|Ciclobenzaprina
-Tramadol|Tramadol
-Hydrocodone|Hidrocodona
-Oxycodone|Oxicodona
-Morphine|Morfina
-Fentanyl|Fentanilo
-Naloxone|Naloxona
-Sertraline|Sertralina
-Fluoxetine|Fluoxetina
-Escitalopram|Escitalopram
-Duloxetine|Duloxetina
-Alprazolam|Alprazolam
-Clonazepam|Clonazepam
-Zolpidem|Zolpidem
-Warfarin|Warfarina
-Apixaban|Apixabán
-Clopidogrel|Clopidogrel
-Tamsulosin|Tamsulosina
-Allopurinol|Alopurinol
-Epinephrine|Epinefrina
-Antibiotic|Antibiótico
-Analgesic|Analgésico / Pastilla para el dolor
-Anti-inflammatory|Antiinflamatorio
-Antipyretic|Antipirético / Para la fiebre
-Antihistamine|Antihistamínico
-Anticoagulant|Anticoagulante
-Antidepressant|Antidepresivo
-Diuretic|Diurético / Pastilla para orinar
-Laxative|Laxante
-Vaccine|Vacuna
-Ointment|Ungüento / Pomada
-Cream|Crema
-Lotion|Loción
-Syrup|Jarabe
-Pill / Tablet|Pastilla / Tableta
-Capsule|Cápsula
-Suppository|Supositorio
-Injection|Inyección
-IV (Intravenous)|Suero / Intravenoso
-Inhaler|Inhalador
-Eye drops|Gotas para los ojos
-Ear drops|Gotas para los oídos
-Patch|Parche
-Dosage|Dosis
-Side effect|Efecto secundario
-Prescription|Receta médica
-OTC (Over the counter)|De venta libre
-Refill|Resurtido / Relleno
+[Síntomas, Dolor y Signos]
+On a scale from 0 to 10, how severe is your pain?|En una escala del 0 al 10, ¿qué tan fuerte es su dolor?
+Sharp / Stabbing / Piercing pain|Dolor agudo / Punzante / Penetrante (como una puñalada)
+Dull ache / Constant aching|Dolor sordo / Dolor continuo y apagado
+Throbbing / Pulsating pain|Dolor pulsátil / Latiente (que late)
+Burning sensation|Sensación de ardor o quemazón
+Shooting / Radiating pain|Dolor fulgurante / Dolor que se irradia o se corre
+Cramping / Colicky pain|Dolor tipo cólico / Retortijón / Calambre
+Tightness / Pressure / Squeezing in the chest|Opresión / Presión / Sensación de apretón en el pecho
+Numbness and tingling (Pins and needles / Paresthesia)|Entumecimiento (adormecimiento) y hormigueo
+Lightheadedness / Feeling faint (Presyncope)|Sensación de desmayo / Aturdimiento / Desvanecimiento
+Dizziness / Room spinning (Vertigo)|Mareo / Vértigo (sentir que todo da vueltas)
+Shortness of breath / Winded (Dyspnea)|Falta de aire / Dificultad para respirar / Ahogo
+Shortness of breath when lying flat (Orthopnea)|Falta de aire al estar acostado boca arriba (Ortopnea)
+Chills, shivering, and night sweats|Escalofríos, temblores y sudoración nocturna
+Low-grade fever vs. High fever|Febrícula (calentura leve) vs. Fiebre alta
+Fatigue, lethargy, and malaise|Fatiga, letargo (decaimiento) y malestar general
+Unexplained weight loss / Loss of appetite (Anorexia)|Pérdida de peso inexplicable / Falta de apetito (Inapetencia)
+Swelling in the ankles and feet (Peripheral edema)|Hinchazón en los tobillos y pies (Edema periférico)
+Itching / Pruritus|Picazón / Comezón / Prurito
+Bruising easily (Ecchymosis)|Moretones fáciles (Hematomas / Equimosis)
+Hoarseness / Raspy voice|Ronquera / Voz áspera o afónica
+Swollen lymph nodes (Swollen glands)|Ganglios linfáticos inflamados (Bolitas en el cuello/axilas)
+Stiffness and reduced range of motion|Rigidez y disminución del rango de movimiento
+Restlessness / Agitation|Inquietud / Agitación
 
-[Procedimientos e Instrumental]
-Surgery|Cirugía / Operación
-Biopsy|Biopsia
-Endoscopy|Endoscopia
-Colonoscopy|Colonoscopia
-Bronchoscopy|Broncoscopia
-Cystoscopy|Cistoscopia
-Laparoscopy|Laparoscopia
-Appendectomy|Apendicectomía
-Cholecystectomy|Colecistectomía
-Hysterectomy|Histerectomía
-Mastectomy|Mastectomía
-Vasectomy|Vasectomía
-Tubal ligation|Ligadura de trompas
-Cesarean section / C-section|Cesárea
-Amputation|Amputación
-Transplant|Trasplante
-Graft|Injerto
-Dialysis|Diálisis
-Chemotherapy|Quimioterapia
-Radiation therapy|Radioterapia
-Physical therapy|Terapia física
-Acupuncture|Acupuntura
-X-ray|Radiografía / Rayos X
-MRI|Resonancia magnética
-CT scan / CAT scan|Tomografía / TAC
-Ultrasound / Sonogram|Ultrasonido / Ecografía
-Mammogram|Mamografía
-EKG / ECG|Electrocardiograma
-Echocardiogram|Ecocardiograma
-EEG|Electroencefalograma
-Blood test|Examen de sangre
-Urinalysis|Examen de orina
-Stool test|Examen de heces
-Pap smear|Papanicolaou
-Culture|Cultivo
-Spinal tap / Lumbar puncture|Punción lumbar
-Catheterization|Sondaje
-Intubation|Intubación
-Tracheostomy|Traqueostomía
-Anesthesia|Anestesia
-Local anesthesia|Anestesia local
-General anesthesia|Anestesia general
-Epidural|Epidural / La raquia
-Stitches / Sutures|Puntos / Suturas
-Staples|Grapas
-Cast|Yeso
-Splint|Férula / Tablilla
-Sling|Cabestrillo
-Crutches|Muletas
-Walker|Andadera / Andador
-Wheelchair|Silla de ruedas
-Stethoscope|Estetoscopio
-Scalpel|Bisturí
-Syringe|Jeringa
-Needle|Aguja
-Catheter|Catéter / Sonda
-Tourniquet|Torniquete
-Gauze|Gasa
-Bandage|Vendaje / Venda
-Band-aid|Curita
-Thermometer|Termómetro
-Scale|Báscula / Pesa
-Blood pressure cuff|Baumanómetro
-Pulse oximeter|Oxímetro de pulso
-Defibrillator|Desfibrilador
-Pacemaker|Marcapasos
-Ventilator|Respirador artificial
-Incubator|Incubadora
-Stretcher|Camilla
-IV pole|Portasuero
+[Anatomía General y Órganos]
+Skull, Scalp, Forehead, and Temple|Cráneo, cuero cabelludo, frente y sien
+Jaw (Mandible), Cheekbone, and Chin|Mandíbula (quijada), pómulo y barbilla (mentón)
+Windpipe (Trachea) and Voice box (Larynx)|Tráquea y laringe (cuerdas vocales)
+Food pipe (Esophagus) and Throat (Pharynx)|Esófago y garganta (faringe)
+Collarbone (Clavicle) and Shoulder blade (Scapula)|Clavícula y omóplato (escápula)
+Breastbone (Sternum) and Rib cage|Esternón y caja torácica (costillas)
+Spine, Vertebrae, and Tailbone (Coccyx)|Columna vertebral, vértebras y cóccix (rabadilla)
+Armpit (Axilla), Upper arm, Forearm, and Wrist|Axila, brazo, antebrazo y muñeca
+Knuckles, Palm, Thumb, and Fingernails|Nudillos, palma, pulgar y uñas de las manos
+Hip, Groin (Inguinal area), and Buttocks|Cadera, ingle (zona inguinal) y glúteos (nalgas)
+Thigh, Kneecap (Patella), Shin, and Calf|Muslo, rótula (choquezuela), espinilla (tibia) y pantorrilla (batata)
+Ankle, Heel, Arch of the foot, and Toes|Tobillo, talón, arco del pie y dedos de los pies
+Lungs, Bronchial tubes, and Diaphragm|Pulmones, bronquios y diafragma
+Heart, Aorta, Arteries, Veins, and Capillaries|Corazón, aorta, arterias, venas y capilares
+Stomach, Small intestine, and Large intestine (Colon)|Estómago, intestino delgado e intestino grueso (colon)
+Liver, Gallbladder, and Bile ducts|Hígado, vesícula biliar y conductos biliares (vías biliares)
+Pancreas, Spleen, and Appendix|Páncreas, bazo y apéndice
+Kidneys, Ureters, Urinary bladder, and Urethra|Riñones, uréteres, vejiga urinaria y uretra
+Adrenal glands, Thyroid gland, and Pituitary gland|Glándulas suprarrenales, glándula tiroides y glándula pituitaria (hipófisis)
+Uterus (Womb), Ovaries, Fallopian tubes, and Cervix|Útero (matriz), ovarios, trompas de Falopio y cuello uterino (cérvix)
+Prostate gland, Testicles, and Scrotum|Glándula prostática (próstata), testículos y escroto
+Brain, Spinal cord, and Sciatic nerve|Cerebro, médula espinal y nervio ciático
+Bone marrow, Cartilage, Tendons, and Ligaments|Médula ósea, cartílago, tendones y ligamentos
 
-[Síntomas y Signos]
-Pain|Dolor
-Ache|Dolor continuo
-Cramp|Calambre / Retortijón
-Spasm|Espasmo
-Numbness|Entumecimiento / Adormecimiento
-Tingling|Hormigueo
-Itching|Picazón / Comezón
-Burning|Ardor
-Swelling|Hinchazón / Inflamación
-Redness|Enrojecimiento
-Bruise|Moretón / Hematoma
-Bleeding|Sangrado / Hemorragia
-Dizziness|Mareo
-Fainting / Syncope|Desmayo
-Vertigo|Vértigo
-Fatigue|Fatiga / Cansancio
-Weakness|Debilidad
-Fever|Fiebre / Calentura
-Chills|Escalofríos
-Sweating|Sudoración
-Night sweats|Sudores nocturnos
-Nausea|Náuseas
-Vomiting|Vómito
-Diarrhea|Diarrea
-Constipation|Estreñimiento
-Heartburn|Acidez / Agruras
-Indigestion|Indigestión / Empacho
-Bloating|Hinchazón / Gases
-Cough|Tos
-Phlegm / Sputum|Flema / Esputo
-Wheezing|Sibilancias / Silbidos
-Shortness of breath|Falta de aire / Ahogo
-Sneezing|Estornudos
-Runny nose|Escurrimiento nasal
-Stuffy nose|Nariz tapada
-Sore throat|Dolor de garganta
-Hoarseness|Ronquera
-Palpitations|Palpitaciones
-Chest pain|Dolor de pecho
-Rash|Sarpullido / Erupción
-Hives|Ronchas / Urticaria
-Blister|Ampolla
-Pus|Pus
-Lump / Mass|Bulto / Masa / Bolita
-Tremor|Temblor
-Seizure|Convulsión
-Paralysis|Parálisis
-Insomnia|Insomnio
-Weight loss|Pérdida de peso
-Weight gain|Aumento de peso
-Loss of appetite|Pérdida de apetito
-Thirst|Sed
-Dehydration|Deshidratación
-Pallor|Palidez
-Jaundice|Ictericia (piel amarilla)
-Cyanosis|Cianosis (piel azulada)
+[Procedimientos y Cirugías]
+Magnetic Resonance Imaging (MRI) with and without contrast|Resonancia magnética (IRM) con y sin medio de contraste
+Computed Tomography (CT scan / CAT scan)|Tomografía computarizada (TAC)
+Positron Emission Tomography (PET scan)|Tomografía por emisión de positrones (PET)
+Ultrasound / Sonogram|Ultrasonido / Ecografía / Sonograma
+Fluoroscopy / Barium swallow|Fluoroscopia / Trago de bario (Esofagograma)
+Bone density scan (DEXA scan)|Densitometría ósea (Prueba de densidad mineral ósea)
+Laparoscopic cholecystectomy (Gallbladder removal)|Colecistectomía laparoscópica (Extirpación de la vesícula biliar)
+Appendectomy (Appendix removal)|Apendicectomía (Extirpación del apéndice)
+Inguinal / Umbilical / Hiatal hernia repair (Herniorrhaphy)|Reparación de hernia inguinal / umbilical / hiatal (Herniorrafia)
+Total hysterectomy (Uterus removal)|Histerectomía total (Extirpación de la matriz / útero)
+Total knee arthroplasty (Knee replacement)|Artroplastia total de rodilla (Reemplazo total de rodilla)
+Total hip replacement|Reemplazo total de cadera (Artroplastia de cadera)
+Exploratory laparotomy vs. Laparoscopy|Laparotomía exploratoria (cirugía abierta) vs. Laparoscopia
+Upper GI Endoscopy (EGD - Esophagogastroduodenoscopy)|Endoscopia digestiva alta (Esofagogastroduodenoscopia)
+Colonoscopy and Polypectomy|Colonoscopia y polipectomía (extirpación de pólipos)
+Endoscopic Retrograde Cholangiopancreatography (ERCP)|Colangiopancreatografía retrógrada endoscópica (CPRE)
+Bronchoscopy and Bronchoalveolar lavage|Broncoscopia y lavado broncoalveolar
+Cystoscopy (Bladder scope)|Cistoscopia (endoscopia de la vejiga)
+Thoracentesis (Fluid drainage from lungs)|Toracocentesis (Drenaje de líquido de la cavidad pleural/pulmón)
+Paracentesis (Fluid drainage from abdomen)|Paracentesis (Drenaje de líquido de la cavidad abdominal)
+Lumbar puncture (Spinal tap)|Punción lumbar (extracción de líquido cefalorraquídeo)
+Bone marrow aspiration and biopsy|Aspiración y biopsia de médula ósea
+Fine needle aspiration biopsy (FNA)|Biopsia por aspiración con aguja fina (BAAF)
+Incision and Drainage (I&D) of an abscess|Incisión y drenaje de un absceso
+Wound debridement (Removing dead tissue)|Desbridamiento de herida (limpieza de tejido muerto)
+Skin graft / Flap surgery|Injerto de piel / Cirugía de colgajo
+Endotracheal intubation and Mechanical ventilation|Intubación endotraqueal y ventilación mecánica (respirador artificial)
+Tracheostomy (Trach tube)|Traqueostomía (cánula de traqueostomía)
+Central venous catheter (Central line) / PICC line|Catéter venoso central (Vía central) / Catéter PICC (vía central de inserción periférica)
+Port-a-Cath (Implanted venous access port)|Reservorio venoso subcutáneo (Puerto para quimioterapia)
+Gastrostomy tube (G-tube / PEG tube) for tube feeding|Sonda de gastrostomía (Sonda PEG) para alimentación enteral
+Nasogastric tube (NG tube)|Sonda nasogástrica
+Foley catheter (Indwelling urinary catheter)|Sonda de Foley (Sonda vesical permanente para orinar)
+Colostomy and Ileostomy (Ostomy bag)|Colostomía e ileostomía (Bolsa de ostomía)
+Transurethral Resection of the Prostate (TURP)|Resección transuretral de la próstata (RTUP)
+Extracorporeal Shock Wave Lithotripsy (ESWL)|Litotricia extracorpórea por ondas de choque (pulverizar piedras)
+Ventriculoperitoneal (VP) shunt|Derivación ventriculoperitoneal (válvula cerebral)
+Carotid endarterectomy|Endarterectomía carotídea (limpieza de la arteria carótida)
+Blood transfusion and Crossmatching|Transfusión de sangre y pruebas de compatibilidad cruzada
 
-[Especialidades y Personal]
-Doctor / Physician|Doctor / Médico
-Nurse|Enfermero(a)
-Surgeon|Cirujano
-Anesthesiologist|Anestesiólogo
-Cardiologist|Cardiólogo
-Dermatologist|Dermatólogo
-Endocrinologist|Endocrinólogo
-Gastroenterologist|Gastroenterólogo
-Gynecologist|Ginecólogo
-Obstetrician|Obstetra
-Neurologist|Neurólogo
-Oncologist|Oncólogo
-Ophthalmologist|Oftalmólogo
-Optometrist|Optometrista
-Orthopedist|Ortopedista
-ENT|Otorrinolaringólogo
-Pediatrician|Pediatra
-Psychiatrist|Psiquiatra
-Psychologist|Psicólogo
-Pulmonologist|Neumólogo
-Radiologist|Radiólogo
-Rheumatologist|Reumatólogo
-Urologist|Urólogo
-Nephrologist|Nefrólogo
-Dentist|Dentista / Odontólogo
-Pharmacist|Farmacéutico
-Physical therapist|Fisioterapeuta
-Occupational therapist|Terapeuta ocupacional
-Dietitian / Nutritionist|Dietista / Nutricionista
-Paramedic|Paramédico
-Midwife|Partera / Comadrona
-Medical interpreter|Intérprete médico
-Patient|Paciente
+[Medicamentos y Farmacología]
+Prescription medication vs. Over-the-counter (OTC)|Medicamento con receta médica vs. de venta libre (sin receta)
+Generic name vs. Brand name|Nombre genérico vs. Nombre comercial (de marca)
+Dosage, strength, and frequency|Dosis, concentración (miligramos) y frecuencia
+Take once daily / twice daily (BID) / three times daily (TID)|Tomar una vez al día / dos veces al día / tres veces al día
+Take as needed (PRN) for pain or nausea|Tomar según sea necesario (cuando lo necesite) para dolor o náuseas
+Take on an empty stomach / Take with food or milk|Tomar en ayunas (estómago vacío) / Tomar con comida o leche
+Swallow whole; do not crush, chew, or break the tablet.|Tragar entera; no triturar, masticar ni partir la pastilla.
+Taper off the dose gradually; do not stop abruptly.|Reducir la dosis gradualmente; no suspender de golpe.
+Side effects and Adverse drug reactions|Efectos secundarios y reacciones adversas al medicamento
+Drowsiness, dizziness, or dry mouth|Somnolencia (sueño), mareo o boca seca
+Refill / Out of refills|Resurtido (relleno de receta) / Sin resurtidos disponibles
+Prior authorization required by pharmacy|Autorización previa requerida por la farmacia
+Sublingual (under the tongue) / Topical / Intravenous (IV)|Sublingual (debajo de la lengua) / Tópico (en la piel) / Intravenoso
+Intramuscular (IM) / Subcutaneous (Sub-Q) injection|Inyección intramuscular / Inyección subcutánea
+Eye drops (Ophthalmic) / Ear drops (Otic) / Nasal spray|Gotas para los ojos (oftálmicas) / Gotas para los oídos (óticas) / Aerosol nasal
+Ointment, Cream, Lotion, and Transdermal patch|Ungüento (pomada), crema, loción y parche transdérmico
+acetaminophen (Tylenol) — Fever reducer and pain reliever|Acetaminofén / Paracetamol (Tylenol) — Analgésico y antipirético
+ibuprofen (Advil, Motrin) & naproxen (Aleve) — NSAIDs|Ibuprofeno y Naproxeno — Antiinflamatorios no esteroideos (AINE)
+aspirin (Ecotrin) & clopidogrel (Plavix) — Antiplatelets|Aspirina y Clopidogrel (Plavix) — Antiagregantes plaquetarios
+apixaban (Eliquis), rivaroxaban (Xarelto), warfarin (Coumadin)|Apixabán, Rivaroxabán, Warfarina — Anticoagulantes (diluyentes de la sangre)
+enoxaparin (Lovenox) & heparin — Injectable blood thinners|Enoxaparina (Lovenox) y Heparina — Anticoagulantes inyectables
+lisinopril, enalapril, ramipril — ACE inhibitors (Blood pressure)|Lisinopril, Enalapril, Ramipril — Inhibidores de la ECA (presión alta)
+losartan (Cozaar) & valsartan (Diovan) — ARBs (Blood pressure)|Losartán y Valsartán — Antagonistas de receptores de angiotensina
+amlodipine (Norvasc) & diltiazem (Cardizem) — Calcium channel blockers|Amlodipino y Diltiazem — Bloqueadores de los canales de calcio
+metoprolol (Lopressor, Toprol XL) & carvedilol (Coreg) — Beta-blockers|Metoprolol y Carvedilol — Betabloqueadores (corazón y presión)
+furosemide (Lasix) & hydrochlorothiazide (HCTZ) — Diuretics (Water pills)|Furosemida (Lasix) e Hidroclorotiazida — Diuréticos (pastillas para orinar/retención de líquidos)
+spironolactone (Aldactone) — Potassium-sparing diuretic|Espironolactona — Diurético ahorrador de potasio
+atorvastatin (Lipitor) & rosuvastatin (Crestor) — Statins (Cholesterol)|Atorvastatina (Lipitor) y Rosuvastatina (Crestor) — Estatinas (colesterol)
+metformin (Glucophage) — First-line oral diabetes medication|Metformina — Medicamento oral para la diabetes
+semaglutide (Ozempic, Wegovy) & tirzepatide (Mounjaro)|Semaglutida (Ozempic) y Tirzepatida — Agonistas GLP-1 (diabetes y peso)
+insulin glargine (Lantus) & insulin lispro (Humalog)|Insulina glargina (Lantus, acción prolongada) e Insulina lispro (Humalog, acción rápida)
+levothyroxine (Synthroid) — Thyroid hormone replacement|Levotiroxina (Synthroid) — Hormona tiroidea para hipotiroidismo
+omeprazole (Prilosec) & pantoprazole (Protonix) — PPIs (Acid reflux)|Omeprazol y Pantoprazol — Inhibidores de la bomba de protones (protector gástrico)
+famotidine (Pepcid) & calcium carbonate (Tums) — Antacids|Famotidina (Pepcid) y Carbonato de calcio — Antiácidos
+ondansetron (Zofran) & promethazine (Phenergan) — Antiemetics (Nausea)|Ondansetrón (Zofran) y Prometazina — Antieméticos (contra náuseas y vómitos)
+docusate sodium (Colace) & polyethylene glycol (MiraLAX) — Stool softeners|Docusato de sodio (ablandador de heces) y Polietilenglicol (MiraLAX, laxante)
+albuterol (ProAir, Ventolin) — Rescue bronchodilator inhaler|Albuterol / Salbutamol — Inhalador broncodilatador de rescate
+fluticasone/salmeterol (Advair) & budesonide/formoterol (Symbicort)|Advair y Symbicort — Inhaladores de mantenimiento con corticosteroide
+montelukast (Singulair) & cetirizine (Zyrtec) — Allergy and Asthma|Montelukast y Cetirizina — Medicamentos para alergias y asma
+prednisone & methylprednisolone (Medrol) — Oral corticosteroids|Prednisona y Metilprednisolona — Corticosteroides (esteroides para inflamación)
+amoxicillin, augmentin, azithromycin (Z-Pak), ciprofloxacin (Cipro)|Amoxicilina, Augmentin, Azitromicina, Ciprofloxacino — Antibióticos
+cephalexin (Keflex), doxycycline, sulfamethoxazole/trimethoprim (Bactrim)|Cefalexina, Doxiciclina, Trimetoprima/Sulfametoxazol (Bactrim) — Antibióticos
+fluconazole (Diflucan) & nystatin — Antifungals|Fluconazol y Nistatina — Antimicóticos (contra hongos)
+acyclovir & valacyclovir (Valtrex) — Antivirals|Aciclovir y Valaciclovir — Antivirales (herpes/culebrilla)
+gabapentin (Neurontin) & pregabalin (Lyrica) — Nerve pain / Seizures|Gabapentina y Pregabalina (Lyrica) — Dolor neuropático (de nervios) y convulsiones
+cyclobenzaprine (Flexeril) & methocarbamol (Robaxin) — Muscle relaxers|Ciclobenzaprina y Metocarbamol — Relajantes musculares
+tramadol (Ultram), hydrocodone/acetaminophen (Norco), oxycodone (Percocet)|Tramadol, Hidrocodona (Norco), Oxicodona (Percocet) — Analgésicos opioides
+morphine, hydromorphone (Dilaudid), fentanyl — Strong hospital opioids|Morfina, Hidromorfona (Dilaudid), Fentanilo — Opioides potentes
+naloxone (Narcan) & buprenorphine/naloxone (Suboxone)|Naloxona (Narcan, revertir sobredosis) y Suboxone (tratamiento de adicción)
+sertraline (Zoloft), escitalopram (Lexapro), fluoxetine (Prozac) — SSRIs|Sertralina, Escitalopram, Fluoxetina — Antidepresivos ISRS
+duloxetine (Cymbalta) & bupropion (Wellbutrin) — Antidepressants|Duloxetina (Cymbalta) y Bupropión (Wellbutrin) — Antidepresivos
+alprazolam (Xanax), clonazepam (Klonopin), lorazepam (Ativan) — Benzodiazepines|Alprazolam, Clonazepam, Lorazepam — Benzodiacepinas (ansiolíticos/sedantes)
+zolpidem (Ambien) & trazodone — Sleep aids (Insomnia)|Zolpidem (Ambien) y Trazodona — Medicamentos para el insomnio
+tamsulosin (Flomax) & finasteride (Proscar) — Enlarged prostate|Tamsulosina (Flomax) y Finasterida — Para la próstata agrandada
+allopurinol (Zyloprim) & colchicine — Gout medications|Alopurinol y Colchicina — Medicamentos para la gota (ácido úrico)
+
+[Laboratorio y Patología]
+Complete Blood Count (CBC) with differential|Hemograma completo (Biometría hemática) con conteo diferencial
+Comprehensive Metabolic Panel (CMP) / Basic Metabolic Panel (BMP)|Panel metabólico completo / Panel metabólico básico
+Lipid panel (Total cholesterol, LDL, HDL, Triglycerides)|Perfil lipídico (Colesterol total, colesterol malo LDL, bueno HDL, triglicéridos)
+Fasting blood glucose (Fasting blood sugar)|Glucosa en sangre en ayunas (Azúcar en ayunas)
+Hemoglobin A1c (HbA1c - 3-month average blood sugar)|Hemoglobina glucosilada A1c (Promedio de azúcar de 3 meses)
+Thyroid Stimulating Hormone (TSH) and Free T4|Hormona estimulante de la tiroides (TSH) y T4 libre
+Liver Function Tests (LFTs - AST, ALT, Bilirubin, Alkaline phosphatase)|Pruebas de función hepática (Transaminasas AST, ALT, bilirrubina, fosfatasa alcalina)
+Kidney function (Blood Urea Nitrogen - BUN, Creatinine, eGFR)|Función renal (Nitrógeno ureico en sangre BUN, creatinina, tasa de filtración glomerular)
+Coagulation panel (PT / INR / PTT)|Panel de coagulación (Tiempo de protrombina PT / INR)
+Red Blood Cells (RBC), White Blood Cells (WBC), and Platelets|Glóbulos rojos (eritrocitos), glóbulos blancos (leucocitos) y plaquetas
+Hemoglobin and Hematocrit|Hemoglobina y hematocrito
+Electrolytes (Sodium, Potassium, Chloride, Bicarbonate, Calcium)|Electrolitos (Sodio, potasio, cloruro, bicarbonato, calcio)
+Urinalysis (UA) and Urine culture with sensitivity|Análisis de orina (Examen general de orina - EGO) y urocultivo con antibiograma
+Stool test for occult blood (Fecal Occult Blood Test - FOBT) and Ova & Parasites|Examen de sangre oculta en heces y coproparasitoscópico (parásitos)
+Blood culture, Throat culture, and Wound culture|Hemocultivo (cultivo de sangre), cultivo de garganta y cultivo de herida
+Prostate-Specific Antigen (PSA)|Antígeno prostático específico (PSA)
+Erythrocyte Sedimentation Rate (ESR) and C-Reactive Protein (CRP)|Velocidad de sedimentación globular (VSG) y Proteína C reactiva (marcadores de inflamación)
+Troponin and B-type Natriuretic Peptide (BNP)|Troponina y Péptido natriurético tipo B (marcadores cardíacos)
+Arterial Blood Gas (ABG) and Lactic acid|Gasometría arterial (Gases en sangre) y ácido láctico
+Toxicology screen (Urine drug screen)|Examen toxicológico (Prueba de detección de drogas en orina)
+
+[Cardiología y Vascular]
+High blood pressure (Hypertension) vs. Low blood pressure (Hypotension)|Presión arterial alta (Hipertensión) vs. Presión arterial baja (Hipotensión)
+Coronary Artery Disease (CAD) and Atherosclerosis (Clogged arteries)|Enfermedad de las arterias coronarias y aterosclerosis (arterias tapadas/endurecidas)
+Myocardial Infarction (Heart attack) vs. Cardiac arrest|Infarto agudo de miocardio (Ataque al corazón) vs. Paro cardíaco
+Angina pectoris (Stable and Unstable chest pain)|Angina de pecho (Dolor de pecho estable e inestable)
+Congestive Heart Failure (CHF) and Ejection fraction|Insuficiencia cardíaca congestiva y fracción de eyección
+Atrial Fibrillation (A-fib) and Atrial Flutter|Fibrilación auricular y aleteo auricular (arritmias)
+Bradycardia (Slow heart rate) and Tachycardia (Fast heart rate)|Bradicardia (latidos lentos) y Taquicardia (latidos rápidos)
+Heart murmur and Heart valve disease (Mitral regurgitation, Aortic stenosis)|Soplo cardíaco y valvulopatía (insuficiencia mitral, estenosis aórtica)
+Electrocardiogram (EKG / ECG - 12-lead)|Electrocardiograma de 12 derivaciones
+Echocardiogram (Transthoracic TTE / Transesophageal TEE)|Ecocardiograma (Ultrasonido del corazón transtorácico / transesofágico)
+Holter monitor (24-48 hour continuous heart monitor)|Monitor Holter (registro continuo del corazón por 24-48 horas)
+Exercise treadmill stress test / Nuclear stress test|Prueba de esfuerzo en caminadora / Prueba de esfuerzo nuclear
+Cardiac catheterization and Coronary angiogram|Cateterismo cardíaco y angiografía coronaria
+Percutaneous Coronary Intervention (PCI / Angioplasty with Stent)|Angioplastia coronaria con colocación de stent (malla arterial)
+Coronary Artery Bypass Graft (CABG - Open-heart bypass surgery)|Cirugía de derivación coronaria (Bypass de arteria coronaria a corazón abierto)
+Pacemaker and Implantable Cardioverter-Defibrillator (ICD)|Marcapasos y Desfibrilador cardioversor implantable (DAI)
+Electrical cardioversion and Catheter ablation|Cardioversión eléctrica y ablación con catéter
+Deep Vein Thrombosis (DVT - Blood clot in the leg)|Trombosis venosa profunda (TVP - coágulo de sangre en la pierna)
+Peripheral Artery Disease (PAD) and Claudication|Enfermedad arterial periférica y claudicación (dolor en piernas al caminar)
+Abdominal Aortic Aneurysm (AAA) and Varicose veins|Aneurisma de la aorta abdominal y venas varicosas (várices)
+Pericarditis and Endocarditis|Pericarditis (inflamación del saco del corazón) y Endocarditis (infección de válvulas)
+
+[Neurología y Neurocirugía]
+Cerebrovascular Accident (CVA / Stroke - Ischemic vs. Hemorrhagic)|Accidente cerebrovascular (ACV / Derrame cerebral - Isquémico por coágulo vs. Hemorrágico por sangrado)
+Transient Ischemic Attack (TIA / Mini-stroke)|Ataque isquémico transitorio (AIT / Mini derrame cerebral)
+Facial drooping, arm weakness, and slurred speech (Dysarthria)|Caída de un lado de la cara, debilidad en el brazo y habla arrastrada (Disartria)
+Aphasia (Difficulty speaking or understanding language)|Afasia (Dificultad para hablar o comprender el lenguaje)
+Seizure / Convulsion and Epilepsy (Grand mal / Tonic-clonic vs. Absence)|Convulsión / Ataque y Epilepsia (Tónico-clónica generalizada vs. Crisis de ausencia)
+Electroencephalogram (EEG - Brain wave test)|Electroencefalograma (Estudio de las ondas cerebrales)
+Electromyography (EMG) and Nerve Conduction Study (NCS)|Electromiografía y Estudio de conducción nerviosa
+Migraine headache with aura vs. Tension headache vs. Cluster headache|Migraña (jaqueca) con aura vs. Cefalea tensional vs. Cefalea en racimos
+Concussion and Traumatic Brain Injury (TBI)|Conmoción cerebral y Traumatismo craneoencefálico (TCE)
+Subdural hematoma and Brain aneurysm|Hematoma subdural (sangrado en el cerebro) y Aneurisma cerebral
+Multiple Sclerosis (MS) and Amyotrophic Lateral Sclerosis (ALS)|Esclerosis múltiple y Esclerosis lateral amiotrófica (ELA)
+Parkinson's disease and Essential tremor|Enfermedad de Parkinson y Temblor esencial
+Alzheimer's disease and Vascular dementia|Enfermedad de Alzheimer y Demencia vascular
+Peripheral neuropathy (Diabetic nerve damage)|Neuropatía periférica (daño a los nervios, común en diabetes)
+Bell's palsy (Facial nerve paralysis) and Trigeminal neuralgia|Parálisis de Bell (parálisis facial) y Neuralgia del trigémino
+Sciatica and Radiculopathy (Pinched nerve)|Ciática y Radiculopatía (nervio pellizcado o comprimido)
+Meningitis and Encephalitis|Meningitis y Encefalitis (infección de las membranas o del cerebro)
+Guillain-Barré syndrome and Myasthenia gravis|Síndrome de Guillain-Barré y Miastenia grave
+
+[Gastroenterología y Hepatología]
+Gastroesophageal Reflux Disease (GERD / Acid reflux / Heartburn)|Enfermedad por reflujo gastroesofágico (ERGE / Reflujo ácido / Acidez o agruras)
+Peptic ulcer disease and Helicobacter pylori (H. pylori) infection|Úlcera péptica (gástrica/duodenal) e infección por la bacteria Helicobacter pylori
+Gastritis and Gastroenteritis (Stomach flu)|Gastritis y Gastroenteritis (infección estomacal)
+Dysphagia (Difficulty swallowing) and Odynophagia (Painful swallowing)|Disfagia (dificultad para tragar) y Odinofagia (dolor al tragar)
+Nausea, Retching (Dry heaves), and Vomiting (Emesis)|Náuseas, arcadas secas y vómitos (émesis)
+Vomiting blood (Hematemesis) / Coffee-ground emesis|Vómito con sangre (Hematemesis) / Vómito con aspecto de borra de café
+Bowel movement (BM), Constipation, and Diarrhea|Evacuación intestinal (obrar / hacer del baño), estreñimiento y diarrea
+Black, tarry stools (Melena) vs. Bright red blood in stool (Hematochezia)|Heces negras y alquitranadas (Melena) vs. Sangre roja brillante en las heces (Rectorragia)
+Bloating, Abdominal distension, Belching (Burping), and Flatulence|Inflamación abdominal, distensión, eructos y flatulencia (gases)
+Irritable Bowel Syndrome (IBS) vs. Inflammatory Bowel Disease (IBD)|Síndrome del intestino irritable (Colon irritable) vs. Enfermedad inflamatoria intestinal
+Crohn's disease and Ulcerative colitis|Enfermedad de Crohn y Colitis ulcerosa
+Celiac disease (Gluten intolerance) and Diverticulitis / Diverticulosis|Enfermedad celíaca (intolerancia al gluten) y Diverticulitis / Diverticulosis
+Gallstones (Cholelithiasis) and Cholecystitis (Gallbladder inflammation)|Cálculos biliares (piedras en la vesícula) y Colecistitis (inflamación de la vesícula)
+Pancreatitis and Appendicitis|Pancreatitis (inflamación del páncreas) y Apendicitis
+Fatty liver disease (Steatosis), Hepatitis (A, B, C), and Cirrhosis|Hígado graso (esteatosis hepática), Hepatitis y Cirrosis hepática
+Jaundice (Yellowing of skin and eyes) and Ascites (Fluid in belly)|Ictericia (piel y ojos amarillos) y Ascitis (líquido acumulado en el abdomen)
+Hemorrhoids (Internal/External), Anal fissure, and Rectal prolapse|Hemorroides (almorranas), fisura anal y prolapso rectal
+Bowel obstruction (Ileus) and Bowel preparation (Prep for colonoscopy)|Obstrucción intestinal y Preparación intestinal (purga para colonoscopia)
+
+[Ortopedia, Reumatología y Fisioterapia]
+Fracture: Closed (Simple), Open (Compound), Comminuted, and Hairline (Stress)|Fractura: Cerrada (simple), Abierta (expuesta), Conminuta (en varios fragmentos) y Fisura
+Dislocation (Subluxation) of a joint|Dislocación (luxación / zafadura) de una articulación
+Sprain (Torn/stretched ligament) vs. Strain (Torn/pulled muscle or tendon)|Esguince (torcedura de ligamento) vs. Distensión o desgarro muscular/tendinoso
+Anterior Cruciate Ligament (ACL) tear and Meniscus tear|Desgarro del ligamento cruzado anterior (LCA) y rotura de menisco
+Rotator cuff tear and Frozen shoulder (Adhesive capsulitis)|Desgarro del manguito rotador y hombro congelado (capsulitis adhesiva)
+Carpal tunnel syndrome, Trigger finger, and Ganglion cyst|Síndrome del túnel carpiano, dedo en gatillo y quiste sinovial (ganglión)
+Tennis elbow (Lateral epicondylitis) and Bursitis / Tendinitis|Codo de tenista (epicondilitis) y Bursitis / Tendinitis
+Plantar fasciitis and Heel spur|Fascitis plantar y espolón calcáneo (espolón en el talón)
+Herniated disc (Slipped/bulging disc) and Spinal stenosis|Hernia discal (disco herniado/abombado) y Estenosis espinal (estrechamiento de la columna)
+Scoliosis, Kyphosis, and Degenerative disc disease|Escoliosis (desviación de columna), Cifosis y Enfermedad degenerativa de disco
+Osteoarthritis (Wear-and-tear arthritis) vs. Rheumatoid arthritis|Osteoartritis (artrosis por desgaste) vs. Artritis reumatoide
+Osteoporosis and Osteopenia (Low bone density)|Osteoporosis y Osteopenia (baja densidad en los huesos)
+Gout (Uric acid crystals in joints), Lupus (SLE), and Fibromyalgia|Gout (gota por ácido úrico), Lupus eritematoso sistémico y Fibromialgia
+Cast (Fiberglass/Plaster), Splint, Sling, and Orthopedic boot (Walking boot)|Yeso (fibra de vidrio), férula (tablilla), cabestrillo y bota ortopédica
+Crutches, Walker, Cane, and Wheelchair|Muletas, andadera (andador), bastón y silla de ruedas
+Weight-bearing status: Non-weight-bearing vs. Weight-bearing as tolerated|Apoyo de peso: Sin apoyar el pie (sin carga de peso) vs. Apoyar según lo tolere
+Physical Therapy (PT) and Occupational Therapy (OT)|Fisioterapia (Terapia física) y Terapia ocupacional
+Cortisone shot (Steroid injection) and Joint aspiration|Inyección de cortisona (infiltración) y aspiración articular
+
+[Ginecología, Obstetricia y Neonatal]
+First day of your Last Menstrual Period (LMP)|Primer día de su última menstruación (regla / período)
+Estimated Due Date (EDD) and Gestational age|Fecha probable de parto (fecha de alivio) y edad gestacional
+Heavy menstrual bleeding (Menorrhagia) and Painful periods (Dysmenorrhea)|Sangrado menstrual abundante (menorragia) y cólicos menstruales fuertes (dismenorrea)
+Spotting between periods and Postmenopausal bleeding|Manchado entre reglas y sangrado posmenopáusico
+Hot flashes, Night sweats, and Hormone Replacement Therapy (HRT)|Bochornos (sofocos), sudores nocturnos y terapia de reemplazo hormonal
+Pap smear (Cervical cytology) and Human Papillomavirus (HPV) test|Papanicolaou (citología cervical) y prueba del virus del papiloma humano (VPH)
+Colposcopy, Cervical biopsy, and LEEP procedure|Colposcopia, biopsia de cuello uterino y procedimiento LEEP (escisión electroquirúrgica)
+Pelvic examination with a speculum and Bimanual exam|Examen pélvico con espéculo y examen bimanual
+Transvaginal ultrasound and Screening / Diagnostic Mammogram|Ultrasonido transvaginal (endovaginal) y Mamografía de detección / diagnóstica
+Uterine fibroids (Myomas), Ovarian cysts, and Endometriosis|Fibromas uterinos (miomas), quistes ováricos y endometriosis
+Polycystic Ovary Syndrome (PCOS) and Pelvic Inflammatory Disease (PID)|Síndrome de ovario poliquístico (SOP) y Enfermedad inflamatoria pélvica
+Vaginal discharge, Yeast infection (Candidiasis), and Bacterial vaginosis|Flujo vaginal, infección por hongos (candidiasis) y vaginosis bacteriana
+Contraception: Birth control pills, Intrauterine Device (IUD), Implant (Nexplanon), Depo shot|Anticoncepción: Pastillas anticonceptivas, Dispositivo intrauterino (DIU), Implante subdérmico, Inyección
+Tubal ligation (Getting tubes tied) and Vasectomy|Ligadura de trompas (operarse para no tener hijos) y Vasectomía
+Prenatal vitamins with Folic acid and Morning sickness|Vitaminas prenatales con ácido fólico y náuseas matutinas del embarazo
+Ectopic pregnancy (Tubal pregnancy) and Miscarriage (Spontaneous abortion)|Embarazo ectópico (fuera de la matriz) y Aborto espontáneo (pérdida del embarazo)
+Dilation and Curettage (D&C)|Dilatación y legrado (raspado uterino)
+Gestational diabetes and Preeclampsia (High blood pressure in pregnancy)|Diabetes gestacional y Preeclampsia (presión alta durante el embarazo)
+Placenta previa, Placental abruption, and Amniotic fluid|Placenta previa, desprendimiento de placenta y líquido amniótico
+Breech position (Baby feet/bottom first) vs. Head down (Cephalic)|Posición de nalgas (sentado) vs. De cabeza (cefálico)
+Braxton Hicks contractions (False labor) vs. True labor contractions|Contracciones de Braxton Hicks (falso trabajo de parto) vs. Contracciones de parto
+Water breaking (Rupture of membranes) and Mucus plug|Romper fuente (ruptura de membranas) y tapón mucoso
+Cervical dilation and Effacement (Thinning of the cervix)|Dilatación cervical y borramiento (adelgazamiento del cuello uterino)
+Labor induction (Pitocin) and Epidural anesthesia|Inducción del parto (oxitocina/Pitocin) y anestesia epidural (la raquia)
+Vaginal delivery, Episiotomy, Forceps/Vacuum extraction, and Cesarean section (C-section)|Parto vaginal, episiotomía (corte), parto con fórceps/ventosa y Cesárea
+Postpartum hemorrhage, Lochia, and Postpartum depression|Hemorragia posparto, loquios (sangrado posparto) y depresión posparto
+Breastfeeding (Nursing), Latching on, Breast pump, and Mastitis|Lactancia materna (dar pecho), agarre del pezón, extractor de leche (tiraleches) y mastitis
+Newborn screening (Heel prick test), Apgar score, and NICU|Tamizaje neonatal (prueba del talón), puntaje Apgar y UCIN (Cuidados Intensivos Neonatales)
+
+[Pediatría y Vacunación]
+Well-child visit / Check-up and Growth chart percentiles|Consulta del niño sano (control pediátrico) y percentiles de la tabla de crecimiento
+Developmental milestones (Rolling over, sitting up, crawling, walking, talking)|Hitos del desarrollo (darse vuelta, sentarse, gatear, caminar, hablar)
+Soft spot on the baby's head (Fontanelle) and Cradle cap|Mollera (fontanela) y costra láctea
+Jaundice of the newborn and Phototherapy (Bili lights)|Ictericia del recién nacido y fototerapia (luces para bajar la bilirrubina)
+Colic, Spit-up (Reflux), Burping the baby, and Infant formula|Cólico del lactante, regurgitación, sacarle los gases al bebé y leche de fórmula
+Diaper rash, Thrush (White patches in mouth), and Teething|Rozadura del pañal (escaldadura), algodoncillo (candidiasis oral) y dentición (salida de dientes)
+Ear infection (Otitis media), Ear tubes (Tympanostomy tubes), and Swimmer's ear|Infección de oído (otitis media), tubos de ventilación en los oídos y oído de nadador
+Croup (Barking cough), Bronchiolitis, and Respiratory Syncytial Virus (RSV)|Crup (tos perruna), bronquiolitis y Virus Sincitial Respiratorio (VSR)
+Hand, Foot, and Mouth disease, Fifth disease, and Roseola|Enfermedad de manos, pies y boca, eritema infeccioso (quinta enfermedad) y roséola
+Chickenpox (Varicella), Measles, Mumps, and Rubella (German measles)|Varicela, sarampión, paperas (parotiditis) y rubéola
+Whooping cough (Pertussis), Scarlet fever, and Strep throat|Tos ferina, escarlatina e infección de garganta por estreptococos
+Head lice (Nits), Pinworms, and Ringworm (Tinea)|Piojos (liendres), oxiuros (lombrices intestinales) y tiña
+Febrile seizure and Reyes syndrome|Convulsión febril (por fiebre alta) y síndrome de Reye
+Attention-Deficit/Hyperactivity Disorder (ADHD) and Autism Spectrum Disorder (ASD)|Trastorno por déficit de atención e hiperactividad (TDAH) y Trastorno del espectro autista (TEA)
+Immunization schedule / Vaccination record (Shot record)|Esquema de vacunación / Cartilla o tarjeta de vacunas
+DTaP / Tdap vaccine (Diphtheria, Tetanus, Pertussis)|Vacuna DTaP / Tdap (Difteria, Tétanos y Tos ferina)
+MMR vaccine, Varicella vaccine, Polio (IPV), Hepatitis B, and Rotavirus|Vacuna triple vírica (MMR), varicela, polio, hepatitis B y rotavirus
+
+[Neumología y Respiratorio]
+Upper Respiratory Infection (URI / Common cold)|Infección de las vías respiratorias superiores (Resfriado común)
+Asthma, Bronchospasm, and Peak flow meter|Asma, broncoespasmo y medidor de flujo máximo
+Chronic Obstructive Pulmonary Disease (COPD), Emphysema, and Chronic bronchitis|Enfermedad Pulmonar Obstructiva Crónica (EPOC), enfisema y bronquitis crónica
+Pneumonia, Pleurisy (Pleuritic chest pain), and Pleural effusion (Fluid around lungs)|Neumonía (pulmonía), pleuresía y derrame pleural (líquido alrededor de los pulmones)
+Pulmonary Embolism (PE - Blood clot in the lungs)|Embolia pulmonar (coágulo de sangre en los pulmones)
+Pneumothorax (Collapsed lung) and Atelectasis|Neumotórax (pulmón colapsado) y atelectasia
+Tuberculosis (TB), PPD skin test, and QuantiFERON blood test|Tuberculosis, prueba cutánea de tuberculina (PPD) y prueba de sangre QuantiFERON
+Wheezing, Stridor, Crackles (Rales), and Rhonchi|Sibilancias (silbidos en el pecho), estridor, estertores (crepitantes) y roncus
+Coughing up blood (Hemoptysis) vs. Coughing up phlegm/sputum (Productive cough)|Toser sangre (hemoptisis) vs. Tos con flema/esputo (tos productiva)
+Dry, hacking cough vs. Lingering cough|Tos seca e irritativa vs. Tos persistente
+Pulse oximeter (Oxygen saturation level) and Supplemental oxygen (Nasal cannula)|Oxímetro de pulso (nivel de saturación de oxígeno) y oxígeno suplementario (cánula nasal)
+Nebulizer breathing treatment and Inhaler with spacer|Tratamiento con nebulizador (mascarilla de vapor) e inhalador con cámara espaciadora
+Pulmonary Function Tests (PFTs / Spirometry)|Pruebas de función pulmonar (Espirometría)
+Obstructive Sleep Apnea (OSA), Sleep study (Polysomnography), and CPAP / BiPAP machine|Apnea obstructiva del sueño, estudio del sueño (polisomnografía) y máquina CPAP / BiPAP
+
+[Endocrinología y Metabolismo]
+Type 1 Diabetes, Type 2 Diabetes, and Prediabetes (Insulin resistance)|Diabetes tipo 1, Diabetes tipo 2 y Prediabetes (resistencia a la insulina)
+Hyperglycemia (High blood sugar) vs. Hypoglycemia (Low blood sugar)|Hiperglucemia (azúcar alta) vs. Hipoglucemia (azúcar baja / bajón de azúcar)
+Diabetic Ketoacidosis (DKA) and Diabetic peripheral neuropathy|Cetoacidosis diabética y neuropatía periférica diabética
+Diabetic retinopathy and Diabetic foot ulcer|Retinopatía diabética (daño en la vista) y úlcera de pie diabético
+Glucometer (Blood glucose meter), Test strips, and Lancets (Fingerstick)|Glucómetro (medidor de azúcar), tiras reactivas y lancetas (pinchazo en el dedo)
+Continuous Glucose Monitor (CGM) and Insulin pump|Monitor continuo de glucosa (sensor) y bomba de insulina
+Hypothyroidism (Underactive thyroid / Hashimoto's) and Goiter|Hipotiroidismo (tiroides lenta) y bocio (agrandamiento de la tiroides)
+Hyperthyroidism (Overactive thyroid / Graves' disease) and Thyroid nodules|Hipertiroidismo (tiroides acelerada) y nódulos tiroideos
+Adrenal insufficiency (Addison's disease) and Cushing's syndrome|Insuficiencia suprarrenal y síndrome de Cushing
+Metabolic syndrome, Obesity, and Bariatric surgery (Gastric bypass / Sleeve)|Síndrome metabólico, obesidad y cirugía bariátrica (bypass gástrico / manga gástrica)
+
+[Urología y Nefrología]
+Urinary Tract Infection (UTI) and Bladder infection (Cystitis)|Infección de las vías urinarias (IVU / mal de orín) e infección de vejiga (cistitis)
+Kidney infection (Pyelonephritis) and Flank pain|Infección renal (pielonefritis) y dolor en el costado/espalda baja (flanco)
+Burning or pain when urinating (Dysuria) and Blood in the urine (Hematuria)|Ardor o dolor al orinar (disuria) y sangre en la orina (hematuria)
+Urinary frequency, Urgency, Nocturia (Waking up to pee), and Hesitancy|Micción frecuente, urgencia urinaria, nicturia (levantarse de noche a orinar) y dificultad para iniciar el chorro
+Urinary incontinence (Stress vs. Urge) and Urinary retention (Inability to empty bladder)|Incontinencia urinaria (escape de orina) y retención urinaria (no poder vaciar la vejiga)
+Kidney stones (Renal calculi / Nephrolithiasis) and Ureteral stent|Cálculos renales (piedras en los riñones) y catéter doble J (stent ureteral)
+Acute Kidney Injury (AKI) and Chronic Kidney Disease (CKD / End-Stage Renal Disease)|Lesión renal aguda e Insuficiencia renal crónica (enfermedad renal terminal)
+Hemodialysis, Peritoneal dialysis, and Arteriovenous (AV) fistula / graft|Hemodiálisis, diálisis peritoneal y fístula o injerto arteriovenoso
+Benign Prostatic Hyperplasia (BPH / Enlarged prostate) and Prostatitis|Hiperplasia prostática benigna (próstata agrandada) y prostatitis
+Erectile dysfunction (ED), Testicular torsion, Varicocele, and Hydrocele|Disfunción eréctil, torsión testicular, varicocele e hidrocele
+
+[Oncología y Hematología]
+Benign tumor (Non-cancerous) vs. Malignant tumor (Cancerous)|Tumor benigno (no canceroso) vs. Tumor maligno (canceroso)
+Primary cancer site, Metastasis (Cancer has spread), and Stage (I, II, III, IV)|Sitio primario del cáncer, metástasis (el cáncer se ha extendido) y etapa/estadio
+Biopsy pathology report, Tumor markers, and Lymph node involvement|Reporte de patología de la biopsia, marcadores tumorales y afectación de ganglios linfáticos
+Chemotherapy (Infusion cycles), Immunotherapy, and Targeted therapy|Quimioterapia (ciclos de infusión), inmunoterapia y terapia dirigida
+Radiation therapy (External beam / Brachytherapy)|Radioterapia (externa / braquiterapia interna)
+Remission (Partial or Complete), Recurrence (Relapse), and Prognosis|Remisión (parcial o completa), recurrencia (recaída) y pronóstico
+Palliative care (Symptom management) and Hospice care (End-of-life care)|Cuidados paliativos (control de síntomas) y cuidados de hospicio (para pacientes terminales)
+Leukemia, Lymphoma (Hodgkin / Non-Hodgkin), and Multiple myeloma|Leucemia (cáncer en la sangre), linfoma y mieloma múltiple
+Iron-deficiency anemia, Sickle cell anemia, and Vitamin B12 deficiency|Anemia por deficiencia de hierro (ferropénica), anemia drepanocítica (células falciformes) y falta de B12
+Thrombocytopenia (Low platelets), Neutropenia (Low white blood cells), and Hemophilia|Trombocitopenia (plaquetas bajas), neutropenia (defensas bajas) y hemofilia
+
+[Salud Mental, Psiquiatría y Adicciones]
+Major Depressive Disorder (MDD) and Persistent sadness / Loss of interest (Anhedonia)|Trastorno depresivo mayor y tristeza persistente / pérdida de interés (anhedonia)
+Generalized Anxiety Disorder (GAD), Panic attack, and Phobias|Trastorno de ansiedad generalizada, ataque de pánico y fobias
+Bipolar disorder (Manic and Depressive episodes) and Mood swings|Trastorno bipolar (episodios maníacos y depresivos) y cambios bruscos de humor
+Post-Traumatic Stress Disorder (PTSD), Flashbacks, and Nightmares|Trastorno de estrés postraumático (TEPT), recuerdos invasivos y pesadillas
+Obsessive-Compulsive Disorder (OCD) and Intrusive thoughts|Trastorno obsesivo-compulsivo (TOC) y pensamientos intrusivos
+Schizophrenia, Psychosis, Delusions, and Auditory/Visual hallucinations|Esquizofrenia, psicosis, delirios y alucinaciones auditivas o visuales (escuchar voces o ver cosas)
+Suicidal ideation (Thoughts of self-harm) and Homicidal ideation|Ideación suicida (pensamientos de quitarse la vida o hacerse daño) e ideación homicida
+Do you have a plan or intent to hurt yourself or anyone else?|¿Tiene algún plan o intención de hacerse daño a sí mismo o a otra persona?
+Eating disorders: Anorexia nervosa, Bulimia, and Binge eating|Trastornos alimenticios: Anorexia nerviosa, bulimia y trastorno por atracón
+Cognitive Behavioral Therapy (CBT), Counseling, and Support group|Terapia cognitivo-conductual, consejería psicológica y grupo de apoyo
+Inpatient psychiatric hospitalization (Voluntary vs. Involuntary hold / 5150)|Hospitalización psiquiátrica (ingreso voluntario vs. retención involuntaria)
+Substance Use Disorder, Alcoholism, Drug addiction, and Overdose|Trastorno por consumo de sustancias, alcoholismo, drogadicción y sobredosis
+Withdrawal symptoms (Delirium tremens, tremors, sweating) and Detoxification (Detox)|Síntomas de abstinencia (temblores, sudoración) y desintoxicación (Rehabilitación)
+
+[Oftalmología y Optometría]
+Visual acuity test (Snellen eye chart) and Refraction test (Prescription glasses)|Prueba de agudeza visual (tabla optométrica) y examen de refracción (graduación de lentes)
+Nearsightedness (Myopia), Farsightedness (Hyperopia), Astigmatism, and Presbyopia|Miopía (ver mal de lejos), hipermetropía (ver mal de cerca), astigmatismo y presbicia (vista cansada)
+Dilated eye exam, Pupil, Cornea, Retina, Macula, and Optic nerve|Examen de fondo de ojo con pupila dilatada, pupila, córnea, retina, mácula y nervio óptico
+Cataracts and Cataract surgery with Intraocular Lens (IOL) implant|Cataratas y cirugía de cataratas con implante de lente intraocular
+Glaucoma and Intraocular pressure (Eye pressure test / Tonometry)|Glaucoma y presión intraocular (prueba de presión del ojo / tonometría)
+Macular degeneration, Retinal detachment, and Diabetic retinopathy|Degeneración macular, desprendimiento de retina y retinopatía diabética
+Floaters (Spots/cobwebs in vision) and Flashes of light (Photopsia)|Moscas volantes (manchitas o telarañas en la vista) y destellos de luz
+Conjunctivitis (Pink eye), Stye (Hordeolum), Chalazion, and Blepharitis|Conjuntivitis, orzuelo (perrilla en el ojo), chalazión y blefaritis (inflamación del párpado)
+Dry eye syndrome, Artificial tears, Watery eyes, and Photophobia (Sensitivity to light)|Síndrome de ojo seco, lágrimas artificiales, lagrimeo y fotofobia (sensibilidad a la luz)
+Double vision (Diplopia), Blurred vision, and Blindness / Vision loss|Visión doble (diplopía), visión borrosa y ceguera / pérdida de la vista
+Pterygium (Surfer's eye / Fleshy growth on eye) and Corneal abrasion (Scratched eye)|Pterigión (carnosidad en el ojo) y abrasión corneal (rasguño en la córnea)
+
+[Otorrinolaringología (ENT) y Audiología]
+Sinusitis (Sinus infection), Nasal congestion (Stuffy nose), and Runny nose (Rhinorrhea)|Sinusitis, congestión nasal (nariz tapada) y escurrimiento nasal (rinorrea / moqueo)
+Post-nasal drip, Deviated septum, Nasal polyps, and Nosebleed (Epistaxis)|Goteo posnasal, tabique desviado, pólipos nasales y sangrado nasal (epistaxis)
+Tonsillitis, Enlarged adenoids, Tonsillectomy, and Adenoidectomy|Amigdalitis (anginas inflamadas), adenoides agrandadas, amigdalectomía y adenoidectomía
+Earwax (Cerumen) impaction and Ear irrigation (Flushing the ear)|Tapón de cerumen (cera acumulada en el oído) y lavado de oído
+Ruptured eardrum (Tympanic membrane perforation)|Tímpano perforado (ruptura de la membrana timpánica)
+Vertigo, Labyrinthitis, Meniere's disease, and Epley maneuver|Vértigo, laberintitis, enfermedad de Ménière y maniobra de Epley
+Hearing loss (Sensorineural vs. Conductive), Audiogram, Hearing aid, and Cochlear implant|Pérdida auditiva (sordera), audiometría (audiograma), audífono (aparato para sordera) e implante coclear
+
+[Dermatología y Heridas]
+Skin rash, Hives (Urticaria), Blister, Pustule, and Cyst|Sarpullido (erupción cutánea), ronchas (urticaria), ampolla (vejiga), pústula y quiste
+Eczema (Atopic dermatitis), Contact dermatitis, and Psoriasis|Eccema (dermatitis atópica), dermatitis de contacto y psoriasis
+Cellulitis (Bacterial skin infection), Abscess, Boil (Furuncle), and MRSA|Celulitis infecciosa (infección bacteriana de la piel), absceso, forúnculo (nacido) y estafilococo resistente
+Shingles (Herpes zoster), Cold sore (Fever blister), and Scabies|Culebrilla (herpes zóster), fuego labial (herpes labial) y sarna (escabiosis)
+Fungal infection: Athlete's foot (Tinea pedis), Jock itch, and Nail fungus (Onychomycosis)|Infección por hongos: Pie de atleta, tiña inguinal y hongos en las uñas (onicomicosis)
+Mole (Nevus), Skin tag, Wart, Actinic keratosis, and Cryotherapy (Liquid nitrogen)|Lunar (nevo), verruga blanda (acrocordón), mezquino (verruga), queratosis y crioterapia (quemar con frío)
+Melanoma, Basal cell carcinoma, Squamous cell carcinoma, and Mohs surgery|Melanoma, carcinoma basocelular, carcinoma espinocelular y cirugía de Mohs (cáncer de piel)
+Pressure ulcer (Bedsore / Decubitus ulcer), Venous ulcer, and Wound care dressing|Úlcera por presión (llaga o escara por estar encamado), úlcera venosa y curación/vendaje de heridas
+Sterile gauze, Adhesive bandage, Compression wrap, and Negative pressure wound therapy (Wound VAC)|Gasa estéril, venda adhesiva, vendaje compresivo y terapia de presión negativa (bomba de vacío)
+
+[Odontología y Maxilofacial]
+Toothache, Tooth decay (Cavity / Caries), Plaque, and Tartar (Calculus)|Dolor de muelas, caries dental (picadura), placa bacteriana y sarro dental
+Gum disease: Gingivitis, Periodontitis, Bleeding gums, and Receding gums|Enfermedad de las encías: Gingivitis, periodontitis, sangrado de encías y encías retraídas
+Dental abscess, Root canal treatment (Endodontics), and Tooth extraction (Pulling a tooth)|Absceso dental (postemilla/flemón), tratamiento de conducto (endodoncia) y extracción dental (sacar una muela)
+Dental filling, Crown (Cap), Bridge, Dental implant, and Dentures (False teeth)|Empaste (relleno/calza), corona dental, puente, implante dental y dentadura postiza (placa)
+Wisdom teeth (Third molars), Impacted tooth, and Dry socket|Muelas del juicio (terceros molares), muela impactada y alveolitis seca
+Temporomandibular Joint (TMJ) disorder and Teeth grinding (Bruxism)|Trastorno de la articulación temporomandibular (ATM) y rechinar los dientes (bruxismo)
+
+[Urgencias, Trauma y Toxicología]
+Emergency Room (ER) triage, Vital signs, and Trauma bay|Triaje (clasificación) de urgencias, signos vitales y sala de choque (trauma)
+Laceration (Deep cut), Puncture wound, Abrasion (Scrape), and Contusion (Bruise)|Laceración (cortada profunda), herida punzante, abrasión (raspón) y contusión (golpe/moretón)
+First-degree, Second-degree (Blistering), and Third-degree (Full-thickness) burns|Quemaduras de primer grado, segundo grado (con ampollas) y tercer grado (profundas)
+Smoke inhalation, Carbon monoxide poisoning, and Poison Control Center|Inhalación de humo, intoxicación por monóxido de carbono y Centro de Control de Envenenamientos
+Anaphylaxis (Severe allergic reaction), Throat swelling, and Epinephrine auto-injector (EpiPen)|Anafilaxia (reacción alérgica grave), cierre de la garganta y autoinyector de epinefrina (EpiPen)
+Whiplash (Neck strain from car crash), Airbag deployment, and Seatbelt injury|Latigazo cervical (esguince de cuello por choque), activación de bolsas de aire y lesión por cinturón
+Internal bleeding, Hemorrhagic shock, and Sepsis (Bloodstream infection)|Sangrado interno (hemorragia interna), choque hemorrágico y sepsis (infección generalizada en la sangre)
+Heat exhaustion, Heat stroke, Dehydration, and Hypothermia / Frostbite|Agotamiento por calor, golpe de calor (insolación), deshidratación e hipotermia / congelación
+Animal bite, Rabies vaccine, and Tetanus booster shot|Mordedura de animal, vacuna antirrábica y vacuna de refuerzo contra el tétanos
+Cardiopulmonary Resuscitation (CPR), Defibrillator, and Intensive Care Unit (ICU)|Reanimación cardiopulmonar (RCP), desfibrilador y Unidad de Cuidados Intensivos (UCI / Terapia intensiva)
+
+[Regionalismos y Coloquialismos Médicos]
+Empacho / Indigestion or gastrointestinal blockage|Empacho (Indigestión, pesadez estomacal o bloqueo gastrointestinal)
+Mal de orín / Urinary tract infection or dysuria|Mal de orín (Infección urinaria o ardor al orinar)
+Culebrilla / Shingles (Herpes zoster)|Culebrilla (Herpes zóster)
+Perrilla / Stye on the eyelid|Perrilla (Orzuelo en el párpado)
+Algodoncillo / Oral thrush (Candidiasis)|Algodoncillo (Candidiasis oral en bebés)
+Anginas / Tonsils or Tonsillitis|Anginas (Amígdalas o amigdalitis)
+Aire / Muscle spasm or sudden localized pain|Un aire / Punzada (Espasmo muscular o dolor muscular repentino)
+Caída de la mollera / Sunken fontanelle (Dehydration in infants)|Caída de la mollera (Fontanela hundida en bebés, signo de deshidratación)
+Susto / Panic attack or acute emotional shock|Susto (Crisis de ansiedad o choque emocional agudo)
+Agruras / Heartburn or acid reflux|Agruras / Acidez (Reflujo gastroesofágico)
+Almorranas / Hemorrhoids|Almorranas (Hemorroides)
+Nacido or Grano enterrado / Boil, furuncle, or skin abscess|Nacido / Divieso (Forúnculo o absceso en la piel)
+Mezquino / Common wart|Mezquino (Verruga común)
+Jiote or Empeine / Ringworm or dry skin patch|Jiote / Empeine (Tiña o parche de piel seca/eccema)
+Goma or Cruda / Hangover|Goma / Cruda / Resaca (Malestar por consumo de alcohol)
+Chorrillo or Soltura / Diarrhea (Loose stools)|Chorrillo / Soltura de estómago (Diarrea)
+Obrar or Hacer del cuerpo / To have a bowel movement|Obrar / Hacer del cuerpo (Evacuar el intestino / Defecar)
+Romper fuente / Water breaking (Rupture of membranes)|Romper fuente (Ruptura de la bolsa amniótica)
+Fecha de alivio / Due date (Delivery date)|Fecha de alivio / Dar a luz (Fecha probable de parto)
+Cuarentena / Postpartum recovery period (6 weeks)|La cuarentena (Período de recuperación posparto)
+Matriz / Uterus (Womb)|La matriz (El útero)
+Choquezuela or Rótula / Kneecap (Patella)|Choquezuela (Rótula de la rodilla)
+Rabadilla / Tailbone (Coccyx)|Rabadilla (Cóccix)
+Batata or Pantorrilla / Calf of the leg|Batata / Camote (Pantorrilla)
+Carraspera / Throat clearing or scratchy throat|Carraspera (Picazón o aspereza en la garganta)
+Desguanzado or Decaído / Weak, fatigued, or lethargic|Desguanzado / Decaído (Sin fuerzas, fatigado o letárgico)
+Soponcio or Patatús / Fainting spell or sudden dizzy spell|Soponcio / Patatús / Yeyo (Desmayo o malestar súbito)
 `;
 
         const medicalRootsData = [
-            { r: "A-, An-", m: "Sin, falta de", e: "Anemia (sin sangre)" },
-            { r: "Anti-", m: "Contra", e: "Antibiotic (contra bacterias)" },
-            { r: "Brady-", m: "Lento", e: "Bradycardia (ritmo lento)" },
-            { r: "Tachy-", m: "Rápido", e: "Tachycardia (ritmo rápido)" },
+            { r: "A-, An-", m: "Sin, falta de", e: "Anemia" },
+            { r: "Anti-", m: "Contra", e: "Antibiotic" },
+            { r: "Brady-", m: "Lento", e: "Bradycardia" },
+            { r: "Tachy-", m: "Rápido", e: "Tachycardia" },
             { r: "Cardio-", m: "Corazón", e: "Cardiomegaly" },
             { r: "Chole-", m: "Vesícula", e: "Cholecystitis" },
             { r: "-ectomy", m: "Extirpación", e: "Appendectomy" },
@@ -832,14 +877,14 @@ Patient|Paciente
             { r: "-plasty", m: "Reparación", e: "Rhinoplasty" }
         ];
 
-        // 1. CARGA DE BASE DE DATOS (LLAVE NUEVA Y BLINDADA)
-        const STORAGE_KEY = 'OPI_DB_ULTIMATE_1000'; // Llave completamente nueva para evitar la caché anterior
+        // 1. CARGA DE BASE DE DATOS (LLAVE NUEVA Y DESTRUCTOR DE CACHÉ)
+        const STORAGE_KEY = 'OPI_DB_NEW_REPO_7000'; 
         
         function getDatabase() {
             let localData = null;
             try { localData = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) {}
             
-            // Failsafe: Si la base cargó con menos de 50 palabras (error anterior), la destruye y la re-crea.
+            // Failsafe: Si la base está vacía o corrupta, obliga a parsear la original
             if (localData && Array.isArray(localData) && localData.length > 50) {
                 return localData;
             }
@@ -882,7 +927,17 @@ Patient|Paciente
             showToast('📋 Copiado');
         }
 
-        // INIT UI (Asegurar ejecución inmediata)
+        // TABS MÓVILES
+        function switchMobileTab(tabId) {
+            document.querySelectorAll('.mobile-tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(el => { el.classList.remove('text-blue-600', 'dark:text-blue-400'); el.classList.add('text-slate-400'); });
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const navBtn = document.getElementById('nav-' + tabId);
+            if(navBtn) { navBtn.classList.remove('text-slate-400'); navBtn.classList.add('text-blue-600', 'dark:text-blue-400'); }
+        }
+
+        // INIT UI
         function initCat() {
             const cats = [...new Set(medicalTerms.map(t => t.cat))];
             const sel = document.getElementById('categoryFilter');
@@ -893,12 +948,29 @@ Patient|Paciente
 
         const badgeColors = { 
             "Admisión, Seguros y Legal": "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
-            "Anatomía y Órganos": "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300",
-            "Enfermedades y Patologías": "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300",
-            "Medicamentos": "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300",
-            "Procedimientos e Instrumental": "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300",
-            "Síntomas y Signos": "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300",
-            "Especialidades y Personal": "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+            "Instrucciones y Examen Físico": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+            "Síntomas, Dolor y Signos": "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+            "Anatomía General y Órganos": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+            "Procedimientos y Cirugías": "bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-300",
+            "Medicamentos y Farmacología": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
+            "Laboratorio y Patología": "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300",
+            "Cardiología y Vascular": "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
+            "Neurología y Neurocirugía": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+            "Gastroenterología y Hepatología": "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+            "Ortopedia, Reumatología y Fisioterapia": "bg-stone-200 text-stone-800 dark:bg-stone-800 dark:text-stone-300",
+            "Ginecología, Obstetricia y Neonatal": "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+            "Pediatría y Vacunación": "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
+            "Neumología y Respiratorio": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
+            "Endocrinología y Metabolismo": "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+            "Urología y Nefrología": "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+            "Oncología y Hematología": "bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-300",
+            "Salud Mental, Psiquiatría y Adicciones": "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
+            "Oftalmología y Optometría": "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300",
+            "Otorrinolaringología (ENT) y Audiología": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+            "Dermatología y Heridas": "bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+            "Odontología y Maxilofacial": "bg-cyan-50 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+            "Urgencias, Trauma y Toxicología": "bg-red-200 text-red-900 dark:bg-red-900/40 dark:text-red-200",
+            "Regionalismos y Coloquialismos Médicos": "bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
         };
 
         function highlight(text, q) {
@@ -978,14 +1050,11 @@ Patient|Paciente
         }
 
         function resetDatabase() {
-            if(confirm("¿Restaurar diccionario original? (Esto eliminará las palabras que hayas importado)")) { 
+            if(confirm("¿Restaurar diccionario original?")) { 
                 localStorage.removeItem(STORAGE_KEY); 
-                medicalTerms = parseDefaultDB(); // Usa el parser por defecto
+                medicalTerms = parseDefaultDB(); 
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(medicalTerms));
-                initCat(); 
-                filterTerms(); 
-                showToast("🔄 Base de datos restaurada"); 
-                toggleModal('dataModal'); 
+                initCat(); filterTerms(); showToast("🔄 Base de datos restaurada"); toggleModal('dataModal'); 
             }
         }
 
@@ -1030,14 +1099,14 @@ Patient|Paciente
 
             if (isListening) {
                 isListening = false; recognition.stop();
-                if(btn) { btn.innerText = '▶ Iniciar Captura'; btn.className = 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-sm'; }
-                if(pulse) pulse.className = 'w-3 h-3 rounded-full bg-slate-600';
+                if(btn) { btn.innerText = '▶ Iniciar Captura'; btn.className = 'px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-sm'; }
+                if(pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-slate-600';
                 const box = document.getElementById('liveInterimBox');
                 if(box) box.classList.add('hidden');
             } else {
                 isListening = true; try { recognition.start(); } catch (err) {}
-                if(btn) { btn.innerText = '⏹ Detener'; btn.className = 'px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition shadow-sm'; }
-                if(pulse) pulse.className = 'w-3 h-3 rounded-full bg-red-500 animate-ping';
+                if(btn) { btn.innerText = '⏹ Detener'; btn.className = 'px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition shadow-sm'; }
+                if(pulse) pulse.className = 'w-2.5 h-2.5 rounded-full bg-red-500 animate-ping';
                 showToast('🎙️ Escuchando en Inglés');
             }
         }
@@ -1111,8 +1180,8 @@ Patient|Paciente
         }
         function toggleTimer() { 
             const b = document.getElementById('timerBtn');
-            if (timerInt) { clearInterval(timerInt); timerInt = null; if(b){ b.innerText = '▶'; b.className='px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded font-bold text-[10px] text-white transition';} } 
-            else { timerInt = setInterval(() => { timerSecs++; updateTimer(); }, 1000); if(b){ b.innerText = '⏸'; b.className='px-2 py-1 bg-amber-600 hover:bg-amber-500 rounded font-bold text-[10px] text-white transition';} } 
+            if (timerInt) { clearInterval(timerInt); timerInt = null; if(b){ b.innerText = '▶'; b.className='px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-500 rounded font-bold text-[10px] text-white transition';} } 
+            else { timerInt = setInterval(() => { timerSecs++; updateTimer(); }, 1000); if(b){ b.innerText = '⏸'; b.className='px-1.5 py-0.5 bg-amber-600 hover:bg-amber-500 rounded font-bold text-[10px] text-white transition';} } 
         }
         function resetTimer() { if (timerInt) toggleTimer(); timerSecs = 0; updateTimer(); }
         
@@ -1137,7 +1206,6 @@ Patient|Paciente
         // CONVERSORES Y RELOJES
         function convertW(s) { const k=document.getElementById('kgInput'), l=document.getElementById('lbInput'); if(s==='kg') l.value=k.value?(k.value*2.20462).toFixed(1):''; else k.value=l.value?(l.value/2.20462).toFixed(1):''; }
         function convertT(s) { const c=document.getElementById('cInput'), f=document.getElementById('fInput'); if(s==='c') f.value=c.value?((c.value*9/5)+32).toFixed(1):''; else c.value=f.value?((f.value-32)*5/9).toFixed(1):''; }
-        function convertHeight() { const cm = parseFloat(document.getElementById('cmInput').value), out = document.getElementById('ftOutput'); if (!cm) return out.innerText = `ft'in"`; const t = cm/2.54; out.innerText = `${Math.floor(t/12)}'${Math.round(t%12)}"`; }
         function updateClocks() {
             const now = new Date(), opts = { hour: '2-digit', minute: '2-digit', hour12: true };
             if(document.getElementById('time-cr')){
